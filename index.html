@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sethna Stock</title>
+<meta name="theme-color" content="#0F3A45">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sethna Stock">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  html,body{margin:0;height:100%;background:#0F3A45;overflow:hidden}
+  #app{position:fixed;inset:0;width:100%;height:100%;border:0;background:#0F3A45;
+       padding-top:env(safe-area-inset-top);box-sizing:border-box;opacity:0;transition:opacity .25s}
+  #splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+          background:linear-gradient(#0F3A45,#186270);color:#D4A843;font:600 15px/1.4 -apple-system,Segoe UI,Roboto,Arial,sans-serif;text-align:center;padding:24px}
+  #splash .logo{width:92px;height:92px;border:3px solid #D4A843;border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;letter-spacing:1px}
+  #splash .t{margin-top:18px;color:#fff;font-size:18px}
+  #splash .s{margin-top:4px;color:#b9d3d8;font-weight:400;font-size:12px;letter-spacing:2px}
+  #splash .spin{margin-top:28px;width:26px;height:26px;border:3px solid rgba(212,168,67,.25);border-top-color:#D4A843;border-radius:50%;animation:r .9s linear infinite}
+  #splash .msg{margin-top:26px;color:#fff;font-weight:400;max-width:300px}
+  #splash button{margin-top:18px;background:#D4A843;color:#0F3A45;border:0;border-radius:12px;padding:12px 22px;font:700 15px Arial,sans-serif}
+  @keyframes r{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="splash">
+  <div class="logo">SPT</div>
+  <div class="t">Sethna Power Tower</div>
+  <div class="s">STOCK &amp; EQUIPMENT</div>
+  <div class="spin" id="spin"></div>
+  <div class="msg" id="msg" style="display:none"></div>
+</div>
+<iframe id="app" title="Sethna Stock" allow="clipboard-write"></iframe>
+<script>
+/* Personal link: https://<you>.github.io/sethna-stock/?a=<app id>&k=<staff key>
+   a = the Apps Script deployment id, k = the staff member's key (made by the sheet menu).
+   Both are remembered on the phone, so the home-screen app opens straight in. */
+(function () {
+  function get(k){ try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
+  function put(k,v){ try { localStorage.setItem(k, v); } catch (e) {} }
+  var q = new URLSearchParams(location.search);
+  var a = (q.get('a') || '').replace(/[^A-Za-z0-9_-]/g, '');
+  var k = (q.get('k') || '').replace(/[^A-Za-z0-9]/g, '');
+  if (a && k) { put('spt_a', a); put('spt_k', k); } else { a = a || get('spt_a'); k = k || get('spt_k'); }
+
+  var splash = document.getElementById('splash'), frame = document.getElementById('app');
+  function say(t, retry) {
+    document.getElementById('spin').style.display = 'none';
+    var m = document.getElementById('msg'); m.style.display = 'block'; m.innerHTML = t;
+    if (retry) { var b = document.createElement('button'); b.textContent = 'Try again'; b.onclick = function(){ location.reload(); }; m.appendChild(document.createElement('br')); m.appendChild(b); }
+  }
+  if (!a || a.length < 40) { say('Open your personal link once (ask the Facility Manager). After that this app remembers you.'); return; }
+
+  var src = 'https://script.google.com/macros/s/' + a + '/exec' + (k ? '/' + k : '');
+  var done = false;
+  frame.onload = function () { done = true; frame.style.opacity = 1; setTimeout(function(){ splash.style.display = 'none'; }, 250); };
+  frame.src = src;
+  setTimeout(function () { if (!done) say('Slow network — still loading…', true); }, 25000);
+  if (!navigator.onLine) say('No internet connection.', true);
+})();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+</script>
+</body>
+</html>
