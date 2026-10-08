@@ -1605,13 +1605,20 @@ function setCond(c){ call('setAssetCondition',[S.pin,S.apin,S.astCur.type,S.astC
 
 /* ============================================================ DESIGN: date + weather sky + festivals + splash */
 var WX_LAT=13.0256, WX_LNG=77.6510;
-function drawDate(){ var w=S.wx, fest=festival(); $('today').innerHTML=esc(S.data.today)+(fest&&fest.greet?' · '+esc(fest.greet):'')+(w&&w.temp!=null?'<span class="tchip">'+wxIcon(w)+Math.round(w.temp)+'°C</span>':''); }
+function drawDate(){ var w=S.wx, fest=festival(); $('today').innerHTML=esc(S.data.today)+(fest&&fest.greet?' · '+esc(fest.greet):'')+(w&&w.temp!=null?'<span class="tchip" onclick="wxInfo()" style="cursor:pointer">'+wxIcon(w)+Math.round(w.temp)+'°C</span>':''); }
 // The forecast code can say "showers" for the hour even when it is sunny right now,
 // so rain is shown only when rain is actually falling (measured in the last 15 minutes).
+var APP_VER='4.3';
 function realCode(c){ var code=+c.weather_code||0, pr=+c.precipitation||0, cc=c.cloud_cover==null?50:+c.cloud_cover;
-  if (pr>=0.1) return wxRain(code)?code:61;
-  if (wxRain(code)) return cc>=75?3:cc>=35?2:1;
+  if (pr>=0.5 && cc>=60) return wxRain(code)?code:61;             // only real, steady rain
+  if (wxRain(code)) return cc>=80?3:cc>=40?2:1;
   return code; }
+function wxName(c){ return wxRain(c)?(c>=95?'Thunderstorm':'Raining'):c>=3?'Cloudy':c===2?'Partly cloudy':'Sunny / clear'; }
+function wxInfo(){ var w=S.wx||{}; openSheet('<div class="tname" style="font-size:19px">Weather at Sethna Power Tower</div>'+
+  (w.temp!=null?'<div class="kv"><b>Now</b><span>'+esc(wxName(w.code))+', '+Math.round(w.temp)+'°C</span><b>Cloud</b><span>'+(w.cloud!=null?w.cloud+'%':'—')+'</span><b>Rain (15 min)</b><span>'+(w.rain!=null?w.rain+' mm':'—')+'</span>'+
+    '<b>Sunrise / set</b><span>'+esc(fmtT(w.sunrise||''))+' / '+esc(fmtT(w.sunset||''))+'</span><b>Updated</b><span>'+new Date(w.at).toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})+'</span></div>':'<p>No weather yet — needs internet.</p>')+
+  '<p style="margin-top:10px;font-size:12px">From Open-Meteo (free weather service). App version '+APP_VER+'</p>'+
+  '<div class="btns"><button class="btn2 pri full" onclick="closeSheet();loadWeather(true)">Refresh weather</button><button class="btn2 full" onclick="closeSheet()">Close</button></div>', true); }
 function wxRain(c){ return (c>=51&&c<=67)||(c>=80&&c<=82)||c>=95; }
 function wxIcon(w){ var c=w.code, col='#F6C66A';
   if (wxRain(c)) return '<svg viewBox="0 0 24 24" fill="none" stroke="#CFE6F2" stroke-width="1.8" stroke-linecap="round"><path d="M7 14h10a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.6-1.5A4.5 4.5 0 0 0 7 14z"/><path d="M8 17l-1 3M12 17l-1 3M16 17l-1 3"/></svg>';
@@ -1638,14 +1645,14 @@ function setSky(){
   var f=festival(); if (f && f.art) h+=f.art;
   sky.innerHTML=h;
 }
-function loadWeather(){
-  var cached=null; try{ cached=JSON.parse(store('spt_wx2')||'null'); }catch(e){}
-  if (cached && Date.now()-cached.at<20*60000){ S.wx=cached; drawDate(); setSky(); return; }
+function loadWeather(force){
+  var cached=null; try{ cached=JSON.parse(store('spt_wx3')||'null'); }catch(e){}
+  if (!force && cached && Date.now()-cached.at<15*60000){ S.wx=cached; drawDate(); setSky(); return; }
   if (!window.fetch) return;
   fetch('https://api.open-meteo.com/v1/forecast?latitude='+WX_LAT+'&longitude='+WX_LNG+'&current=temperature_2m,weather_code,precipitation,cloud_cover&daily=sunrise,sunset&timezone=Asia%2FKolkata&forecast_days=1')
-    .then(function(r){ return r.json(); }).then(function(j){
-      S.wx={temp:j.current.temperature_2m, code:realCode(j.current), sunrise:(j.daily.sunrise[0]||'').slice(11,16), sunset:(j.daily.sunset[0]||'').slice(11,16), at:Date.now()};
-      try{ store('spt_wx2',JSON.stringify(S.wx)); }catch(e){} drawDate(); setSky(); })
+    .then(function(r){ return r.json(); }).then(function(j){ if(force) toast('Weather updated');
+      S.wx={temp:j.current.temperature_2m, code:realCode(j.current), cloud:j.current.cloud_cover, rain:j.current.precipitation, sunrise:(j.daily.sunrise[0]||'').slice(11,16), sunset:(j.daily.sunset[0]||'').slice(11,16), at:Date.now()};
+      try{ store('spt_wx3',JSON.stringify(S.wx)); }catch(e){} drawDate(); setSky(); })
     .catch(function(){});
 }
 function festival(){
