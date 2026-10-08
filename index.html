@@ -386,7 +386,7 @@ var CAT_ICON = {'Electrical':'bolt','Plumbing':'drop','Garden':'leaf','Security'
   'Club House':'sofa','TT Room':'paddle'};
 function svg(name, sw){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'+(sw||1.8)+'" stroke-linecap="round" stroke-linejoin="round">'+(I[name]||I.box)+'</svg>'; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]}); }
-function initials(n){ return String(n).split(/\s+/).map(function(w){return w[0]||''}).join('').slice(0,2).toUpperCase(); }
+function initials(n){ return String(n).replace(/[^A-Za-z\s]/g,' ').trim().split(/\s+/).map(function(w){return w[0]||''}).join('').slice(0,2).toUpperCase(); }
 
 /* ------------------------------------------------------------ state */
 var S = { data:null, pin:'', who:'', tab:'entry', cat:null, item:null, type:null, qty:1, filter:'all', q:'' };
@@ -426,7 +426,7 @@ function onErr(e){
 function load(){
   // open instantly with the data saved on this phone last time, then refresh it from the sheet
   var c=null; try{ c=JSON.parse(store('spt_cache')||'null'); }catch(e){ c=null; }
-  if (c && c.d && c.who===S.who && c.v===2 && !S.data){ S.data=c.d; S.fromCache=true; afterLoad(); }
+  if (c && c.d && c.who===S.who && c.v===3 && !S.data){ S.data=c.d; S.fromCache=true; afterLoad(); }
   call('getAppData',[S.pin], function(d){
     var wasCache=S.fromCache; S.data=d; S.fromCache=false; saveCache();
     if (!wasCache) return afterLoad();
@@ -435,7 +435,7 @@ function load(){
     if (busy){ updateOutCount(); updateCalDot(); drawDate(); } else afterLoad();
   }, function(e){ if (S.fromCache){ toast('No connection — showing saved data'); } else onErr(e); });
 }
-function saveCache(){ try{ if(S.data&&S.who) store('spt_cache', JSON.stringify({v:2, who:S.who, at:Date.now(), d:S.data})); }catch(e){} }
+function saveCache(){ try{ if(S.data&&S.who) store('spt_cache', JSON.stringify({v:3, who:S.who, at:Date.now(), d:S.data})); }catch(e){} }
 function hideSplash(){ var wait=(S.fromCache?1200:1500)-(Date.now()-(window.SPLASH_T||0)); if(wait>0){ clearTimeout(hideSplash._t); hideSplash._t=setTimeout(hideSplash,wait); return; } var sp=$('splash'); if(sp && !sp.classList.contains('hide')){ sp.classList.add('hide'); setTimeout(function(){ sp.style.display='none'; },500); } }
 function afterLoad(){
   hideSplash();
@@ -880,7 +880,7 @@ function instances(from,to){
   }); });
   (S.data.events||[]).forEach(function(e){ if (e.end>=from && e.start<=to)
     out.push({kind:'ev', id:e.id, title:e.name, start:e.start, end:e.end, status: e.status==='Done' ? 'Done' : e.end<t ? 'Past' : e.start<=t ? 'Ongoing' : 'Upcoming'}); });
-  var v=S.data.v4;
+  var v=S.data.v4 ? V() : null;
   if (v){
     (v.amcVisits||[]).forEach(function(a){ if (a.date>=from && a.date<=to)
       out.push({kind:'amc', id:a.id, title:a.vendor+' visit', sub:a.service, start:a.date, end:a.date, staff:['Everyone'], status: a.status==='Done'?'Done':a.date<t?'Overdue':a.date===t?'Ongoing':'Pending'}); });
@@ -1154,7 +1154,10 @@ function viewPrev(id){
 }
 
 /* ============================================================ v4: shared helpers */
-function V(){ return (S.data && S.data.v4) || {work:[],workTypes:['Electrical','Plumbing','Garden','Civil','Housekeeping','Other'],requests:[],tankToday:[],tankVendors:[],amcVisits:[],fireChecks:[],fireLog:{},fireFreq:[],extinguishers:[],assetPick:{CCTV:[],Borewell:[],Motor:[],Fire:[]},problems:{CCTV:[],Borewell:[],Motor:[],Fire:[]},problemLabel:{},openReports:[]}; }
+var SAMPLE_FIRE=['Main & jockey fire pump run test','Diesel engine fire pump run','Fire alarm panel test','Hose reels & hydrant valves','Sprinkler / riser pressure'];
+function V(){ var v=S.data && S.data.v4;
+  if (v && !v._clean){ v._clean=1; v.fireChecks=(v.fireChecks||[]).filter(function(c){ return SAMPLE_FIRE.indexOf(c.name)<0; }); }   // never show the old sample checks
+  return v || {work:[],workTypes:['Electrical','Plumbing','Garden','Civil','Housekeeping','Other'],requests:[],tankToday:[],tankVendors:[],amcVisits:[],fireChecks:[],fireLog:{},fireFreq:[],extinguishers:[],assetPick:{CCTV:[],Borewell:[],Motor:[],Fire:[]},problems:{CCTV:[],Borewell:[],Motor:[],Fire:[]},problemLabel:{},openReports:[]}; }
 function isMgr(){ return !!(S.data && S.data.admin && S.who===S.data.admin.manager); }
 function crumbBtn(label, js, sub){ return '<div class="crumbs"><button class="back" onclick="'+js+'">'+svg('back',2.2).replace('<svg','<svg width="16" height="16"')+esc(label)+'</button>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</div>'; }
 function openSheet(html,left){ var d=$('done'); d.className='done'+(left?' left':''); d.innerHTML=html; $('overlay').classList.add('show'); }
@@ -1178,8 +1181,9 @@ function dataOk(msg){ return function(d){ S.data=d; updateOutCount(); updateCalD
 function btnBusy(id,t){ var b=$(id); if(b){ b.disabled=true; b.textContent=t||'Saving…'; } }
 function failBtn(id,t){ return function(e){ onErr(e); var b=$(id); if(b){ b.disabled=false; b.textContent=t||'Try again'; } }; }
 function needAdmin(then){ if(S.isAdmin) return then(); toTab('admin'); S.av='home'; renderAdminLock(false); toast('Enter the Admin PIN first'); }
-function loadAdm(then){ call('getAdmin',[S.pin,S.apin], function(r){ S.adm=r; if(then) then(); }); }
-function admGot(r){ S.adm=r; if(r.msg) toast(r.msg); render(); }
+function admClean(r){ if(r&&r.fireChecks) r.fireChecks=r.fireChecks.filter(function(c){ return SAMPLE_FIRE.indexOf(c.name)<0; }); return r; }
+function loadAdm(then){ call('getAdmin',[S.pin,S.apin], function(r){ S.adm=admClean(r); if(then) then(); }); }
+function admGot(r){ S.adm=admClean(r); if(r.msg) toast(r.msg); render(); }
 function fmtDN(iso){ return iso ? fmtD(iso,false)+' '+iso.slice(0,4) : ''; }
 
 /* ------------------------------------------------------------ badges, banners, quick actions */
@@ -1392,11 +1396,11 @@ function renderVenForm(){
 }
 function saveVen(){ var v=S.venEdit!=null?S.adm.vendors[S.venEdit]:{}; var o={id:v.id||''}; ['name','service','contact','phone','start','end','amount','visits','notes'].forEach(function(k){ o[k]=$('vf_'+k).value; });
   if(!o.name.trim()) return toast('Type the vendor name'); btnBusy('vfSave');
-  call('saveVendor',[S.pin,S.apin,o], function(r){ S.adm=r; toast(r.msg); if(!v.id){ S.venEdit=r.vendors.findIndex(function(x){return x.name===o.name.trim()}); } refreshAll(); renderVenForm(); }, failBtn('vfSave')); }
-function addVisit(vid){ var d=$('vs_date').value; if(!d) return toast('Pick the date'); call('saveVisit',[S.pin,S.apin,{vid:vid,date:d}], function(r){ S.adm=r; toast(r.msg); refreshAll(); renderVenForm(); }); }
-function visitDone(id,done){ call('setVisitDone',[S.pin,S.apin,id,done], function(r){ S.adm=r; toast(r.msg); refreshAll(); if(S.wv==='venForm') renderVenForm(); else render(); }); }
-function delVisit(id){ if(!confirm('Remove this visit?')) return; call('deleteVisit',[S.pin,S.apin,id], function(r){ S.adm=r; refreshAll(); renderVenForm(); }); }
-function delVen(id){ if(!confirm('Delete this vendor and its visits?')) return; call('deleteVendor',[S.pin,S.apin,id], function(r){ S.adm=r; toast(r.msg); refreshAll(); wgo('amc'); }); }
+  call('saveVendor',[S.pin,S.apin,o], function(r){ S.adm=admClean(r); toast(r.msg); if(!v.id){ S.venEdit=r.vendors.findIndex(function(x){return x.name===o.name.trim()}); } refreshAll(); renderVenForm(); }, failBtn('vfSave')); }
+function addVisit(vid){ var d=$('vs_date').value; if(!d) return toast('Pick the date'); call('saveVisit',[S.pin,S.apin,{vid:vid,date:d}], function(r){ S.adm=admClean(r); toast(r.msg); refreshAll(); renderVenForm(); }); }
+function visitDone(id,done){ call('setVisitDone',[S.pin,S.apin,id,done], function(r){ S.adm=admClean(r); toast(r.msg); refreshAll(); if(S.wv==='venForm') renderVenForm(); else render(); }); }
+function delVisit(id){ if(!confirm('Remove this visit?')) return; call('deleteVisit',[S.pin,S.apin,id], function(r){ S.adm=admClean(r); refreshAll(); renderVenForm(); }); }
+function delVen(id){ if(!confirm('Delete this vendor and its visits?')) return; call('deleteVendor',[S.pin,S.apin,id], function(r){ S.adm=admClean(r); toast(r.msg); refreshAll(); wgo('amc'); }); }
 function refreshAll(){ call('getAppData',[S.pin], function(d){ S.data=d; updateOutCount(); updateCalDot(); }, function(){}); }
 
 /* ------------------------------------------------------------ report a problem (everyone) */
@@ -1429,8 +1433,8 @@ function renderProblems(){
       '<div class="btns" style="margin-top:12px"><button class="btn2" onclick="repJob(\''+x.id+'\')">Add as job</button><button class="btn2 pri" onclick="repFix(\''+x.id+'\')">Mark fixed ✓</button></div></div>'; }).join('')
       :'<div class="card empty">No open problems ✓</div>');
 }
-function repFix(id){ call('fixReport',[S.pin,S.apin,id], function(r){ S.adm=r; toast(r.msg); call('getAppData',[S.pin], dataOk(false)); }); }
-function repJob(id){ call('reportToJob',[S.pin,S.apin,id], function(r){ S.adm=r; toast(r.msg); call('getAppData',[S.pin], dataOk(false)); }); }
+function repFix(id){ call('fixReport',[S.pin,S.apin,id], function(r){ S.adm=admClean(r); toast(r.msg); call('getAppData',[S.pin], dataOk(false)); }); }
+function repJob(id){ call('reportToJob',[S.pin,S.apin,id], function(r){ S.adm=admClean(r); toast(r.msg); call('getAppData',[S.pin], dataOk(false)); }); }
 
 /* ------------------------------------------------------------ fire safety */
 function fireOcc(c, from, to){ var res=[], k=0, d=c.start, add={Weekly:function(n){return isoAdd(c.start,7*n)},Monthly:function(n){return addMonths(c.start,n)},'Every 3 months':function(n){return addMonths(c.start,3*n)},'Every 6 months':function(n){return addMonths(c.start,6*n)},Yearly:function(n){return addMonths(c.start,12*n)}}[c.freq]||function(n){return addMonths(c.start,n)};
@@ -1491,7 +1495,7 @@ function renderFexAdmin(){
       :'<div class="card empty" style="margin-top:12px">No extinguishers yet. Tap <b>+ Add</b>.</div>');
 }
 function refilled(){ var ids=Object.keys(S.fsel).filter(function(k){return S.fsel[k]}); if(!ids.length) return toast('Tick the extinguishers first');
-  call('markRefilled',[S.pin,S.apin,ids,$('rf_date').value], function(r){ S.adm=r; S.fsel={}; toast(r.msg); refreshAll(); renderFexAdmin(); }); }
+  call('markRefilled',[S.pin,S.apin,ids,$('rf_date').value], function(r){ S.adm=admClean(r); S.fsel={}; toast(r.msg); refreshAll(); renderFexAdmin(); }); }
 function shareRefills(){ var t=S.data.todayIso, l=S.adm.extinguishers.filter(function(f){return f.due && f.due<=isoAdd(t,30)});
   if(!l.length) return toast('No refills due in the next 30 days');
   shareSheet('Refill list','Sethna Power Tower — extinguishers due for refill\n\n'+l.map(function(f){return '• '+f.id+' · '+f.loc+' · '+[f.type,f.size].filter(String).join(' ')+' — due '+fmtDN(f.due)}).join('\n')+'\n\nTotal: '+l.length); }
@@ -1505,8 +1509,8 @@ function renderFexForm(){
     '<button class="save" id="feSave" onclick="saveFex()">Save</button>'+(S.fexEdit?'<button class="btn2 danger" style="width:100%;margin-top:10px" onclick="delFex()">Delete</button>':'')+'</div>';
 }
 function saveFex(){ var o={oldId:S.fexEdit||'',id:$('fe_id').value,type:$('fe_type').value,loc:$('fe_loc').value,size:$('fe_size').value,last:$('fe_last').value,remarks:$('fe_rem').value};
-  if(!o.id.trim()) return toast('Type the number'); btnBusy('feSave'); call('saveExtinguisher',[S.pin,S.apin,o], function(r){ S.adm=r; toast(r.msg); refreshAll(); wgo('fexAdmin'); }, failBtn('feSave','Save')); }
-function delFex(){ if(!confirm('Delete '+S.fexEdit+'?')) return; call('deleteExtinguisher',[S.pin,S.apin,S.fexEdit], function(r){ S.adm=r; refreshAll(); wgo('fexAdmin'); }); }
+  if(!o.id.trim()) return toast('Type the number'); btnBusy('feSave'); call('saveExtinguisher',[S.pin,S.apin,o], function(r){ S.adm=admClean(r); toast(r.msg); refreshAll(); wgo('fexAdmin'); }, failBtn('feSave','Save')); }
+function delFex(){ if(!confirm('Delete '+S.fexEdit+'?')) return; call('deleteExtinguisher',[S.pin,S.apin,S.fexEdit], function(r){ S.adm=admClean(r); refreshAll(); wgo('fexAdmin'); }); }
 function renderFireDefs(){
   if (!S.adm) { $('view').innerHTML='<div class="card loading"><div class="spin"></div>Loading…</div>'; return loadAdm(renderFireDefs); }
   $('view').innerHTML=crumbBtn('Fire safety',"wgo('fire')")+'<div class="card" style="display:flex;align-items:center;gap:12px"><div class="rmain"><div class="tname" style="font-size:18px">Fire checks</div><div class="rsub">They appear in the Calendar on their due days</div></div>'+
@@ -1523,8 +1527,8 @@ function renderFireDefForm(){
     '<button class="save" onclick="saveFD()">Save</button>'+(c.id?'<button class="btn2 danger" style="width:100%;margin-top:10px" onclick="delFD(\''+c.id+'\')">Delete</button>':'')+'</div>';
 }
 function saveFD(){ var c=S.fcEdit!=null?S.adm.fireChecks[S.fcEdit]:{}; call('saveFireCheckDef',[S.pin,S.apin,{id:c.id||'',name:$('fd_name').value,freq:$('fd_freq').value,start:$('fd_start').value,fields:$('fd_fields').value,active:$('fd_act').value==='1'}],
-  function(r){ S.adm=r; toast(r.msg); refreshAll(); wgo('fcAdmin'); }); }
-function delFD(id){ if(!confirm('Delete this check?')) return; call('deleteFireCheckDef',[S.pin,S.apin,id], function(r){ S.adm=r; refreshAll(); wgo('fcAdmin'); }); }
+  function(r){ S.adm=admClean(r); toast(r.msg); refreshAll(); wgo('fcAdmin'); }); }
+function delFD(id){ if(!confirm('Delete this check?')) return; call('deleteFireCheckDef',[S.pin,S.apin,id], function(r){ S.adm=admClean(r); refreshAll(); wgo('fcAdmin'); }); }
 function renderFireLog(){
   if (!S.adm) { $('view').innerHTML='<div class="card loading"><div class="spin"></div>Loading…</div>'; return loadAdm(renderFireLog); }
   var l=S.adm.fireLog;
@@ -1608,7 +1612,7 @@ var WX_LAT=13.0256, WX_LNG=77.6510;
 function drawDate(){ var w=S.wx, fest=festival(); $('today').innerHTML=esc(S.data.today)+(fest&&fest.greet?' · '+esc(fest.greet):'')+(w&&w.temp!=null?'<span class="tchip" onclick="wxInfo()" style="cursor:pointer">'+wxIcon(w)+Math.round(w.temp)+'°C</span>':''); }
 // The forecast code can say "showers" for the hour even when it is sunny right now,
 // so rain is shown only when rain is actually falling (measured in the last 15 minutes).
-var APP_VER='4.3';
+var APP_VER='4.4';
 function realCode(c){ var code=+c.weather_code||0, pr=+c.precipitation||0, cc=c.cloud_cover==null?50:+c.cloud_cover;
   if (pr>=0.5 && cc>=60) return wxRain(code)?code:61;             // only real, steady rain
   if (wxRain(code)) return cc>=80?3:cc>=40?2:1;
@@ -1617,7 +1621,7 @@ function wxName(c){ return wxRain(c)?(c>=95?'Thunderstorm':'Raining'):c>=3?'Clou
 function wxInfo(){ var w=S.wx||{}; openSheet('<div class="tname" style="font-size:19px">Weather at Sethna Power Tower</div>'+
   (w.temp!=null?'<div class="kv"><b>Now</b><span>'+esc(wxName(w.code))+', '+Math.round(w.temp)+'°C</span><b>Cloud</b><span>'+(w.cloud!=null?w.cloud+'%':'—')+'</span><b>Rain (15 min)</b><span>'+(w.rain!=null?w.rain+' mm':'—')+'</span>'+
     '<b>Sunrise / set</b><span>'+esc(fmtT(w.sunrise||''))+' / '+esc(fmtT(w.sunset||''))+'</span><b>Updated</b><span>'+new Date(w.at).toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})+'</span></div>':'<p>No weather yet — needs internet.</p>')+
-  '<p style="margin-top:10px;font-size:12px">From Open-Meteo (free weather service). App version '+APP_VER+'</p>'+
+  '<p style="margin-top:10px;font-size:12px">From Open-Meteo (free weather service). App version '+APP_VER+' · Server version '+esc((S.data&&S.data.ver)||'old — redeploy')+'</p>'+
   '<div class="btns"><button class="btn2 pri full" onclick="closeSheet();loadWeather(true)">Refresh weather</button><button class="btn2 full" onclick="closeSheet()">Close</button></div>', true); }
 function wxRain(c){ return (c>=51&&c<=67)||(c>=80&&c<=82)||c>=95; }
 function wxIcon(w){ var c=w.code, col='#F6C66A';
