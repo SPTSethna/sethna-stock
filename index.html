@@ -21,14 +21,14 @@
     --bg:#F5F1E9; --surface:#FFFFFF; --ink:#17252B; --muted:#6E777B; --line:#E9E3D6;
     --brand:#0E3B45; --brand-2:#15606D; --gold:#C9A24C; --gold-2:#E7CD8C; --gold-soft:#F6EDD8;
     --ok:#2E7D52; --ok-soft:#E3F2E8; --warn:#B7790B; --warn-soft:#FCF0D9; --bad:#B93A2C; --bad-soft:#FBE4E0;
-    --blue-soft:#E4EEF6; --chip:#F1EDE4; --track:#ECE7DC; --press:#FAF7F1; --navbg:rgba(255,255,255,.96); --inp:#FFFFFF;
+    --blue-soft:#E4EEF6; --info:#15606D; --chip:#F1EDE4; --track:#ECE7DC; --press:#FAF7F1; --navbg:rgba(255,255,255,.96); --inp:#FFFFFF;
     --radius:18px; --shadow:0 1px 2px rgba(22,35,42,.05),0 8px 24px rgba(14,59,69,.07);
     --serif:"Lora",Georgia,"Times New Roman",serif; --sans:"Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
   }
   @media (prefers-color-scheme: dark){
     :root{ --bg:#0B1D22; --surface:#12292F; --ink:#EDE7DA; --muted:#93A3A6; --line:#1F3B42;
       --brand:#07161B; --brand-2:#0F2F36; --gold-soft:rgba(201,162,76,.14); --ok:#4DB07A; --ok-soft:rgba(77,176,122,.14);
-      --warn:#E0A631; --warn-soft:rgba(224,166,49,.15); --bad:#E0685A; --bad-soft:rgba(224,104,90,.15); --blue-soft:rgba(120,170,200,.14);
+      --warn:#E0A631; --warn-soft:rgba(224,166,49,.15); --bad:#E0685A; --bad-soft:rgba(224,104,90,.15); --blue-soft:rgba(120,170,200,.14); --info:#6FB7CB; --msg:#DCEFD6;
       --chip:#18343B; --track:#1C3A41; --press:#163239; --navbg:rgba(18,41,47,.97); --inp:#0F2429;
       --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); }
     .save,.btn2.pri,.chip.on{background:var(--gold)!important;color:#10262B!important}
@@ -73,7 +73,7 @@
   .tile{background:var(--surface);border-radius:18px;box-shadow:var(--shadow);padding:15px;text-align:left;display:flex;flex-direction:column;gap:11px;min-height:112px;position:relative;transition:transform .12s}
   .tile:active,.row:active,.action:active,.person:active,.uchip:active{transform:scale(.97)}
   .ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--gold-soft);color:var(--gold)}
-  .tile.asset .ico{background:var(--blue-soft);color:var(--brand-2)}
+  .tile.asset .ico{background:var(--blue-soft);color:var(--info)}
   .ico svg{width:21px;height:21px}
   .tname{font:600 15.5px var(--serif)}
   .tmeta{font-size:11.5px;color:var(--muted)}
@@ -104,7 +104,7 @@
   .lvl i{display:block;height:100%;border-radius:3px}
   .pill{font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;white-space:nowrap}
   .pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
-  .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.neutral{background:var(--chip);color:var(--muted)} .pill.blue{background:var(--blue-soft);color:var(--brand-2)}
+  .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.neutral{background:var(--chip);color:var(--muted)} .pill.blue{background:var(--blue-soft);color:var(--info)}
   .pill.gold{background:var(--gold-soft);color:var(--gold)}
   .chev{color:#B9B3A6}
 
@@ -130,7 +130,7 @@
   .inp:focus,.stepper input:focus{border-color:var(--gold)}
   .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
   input[type=date].inp,input[type=time].inp{min-width:0;-webkit-appearance:none;appearance:none;min-height:50px}
-  .more{margin-top:14px;font-size:14px;font-weight:500;color:var(--brand-2)}
+  .more{margin-top:14px;font-size:14px;font-weight:500;color:var(--info)}
   .save{margin-top:22px;width:100%;height:56px;border-radius:16px;background:var(--brand);color:#fff;font-weight:600;font-size:15.5px;letter-spacing:.3px;box-shadow:0 8px 20px rgba(14,59,69,.25)}
   .save[disabled]{opacity:.55}
   .hint{font-size:12px;color:var(--muted);margin-top:8px}
@@ -191,7 +191,7 @@
   .seg2 button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
   .job{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-top:1px solid var(--line);width:100%;text-align:left}
   .job:first-child{border-top:0}
-  .job .bar{width:4px;align-self:stretch;border-radius:3px;background:var(--brand-2);flex:none}
+  .job .bar{width:4px;align-self:stretch;border-radius:3px;background:var(--info);flex:none}
   .job.ev .bar{background:var(--gold)} .job.over .bar{background:var(--bad)} .job.isdone .bar{background:var(--ok)}
   .job .rname{white-space:normal}
   .job.isdone .rname{text-decoration:line-through;color:var(--muted)}
@@ -204,7 +204,7 @@
   .day{height:46px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:13.5px}
   .day.dim{opacity:.3} .day.today{border:1.5px solid var(--gold)} .day.sel{background:var(--brand);color:#fff}
   .dots{display:flex;gap:3px;height:6px}
-  .dots i{width:6px;height:6px;border-radius:50%;background:var(--brand-2)}
+  .dots i{width:6px;height:6px;border-radius:50%;background:var(--info)}
   .dots i.ev{background:var(--gold)} .dots i.over{background:var(--bad)} .dots i.dn{background:var(--ok)}
   .day.sel .dots i{box-shadow:0 0 0 1.5px #fff}
   .fab{position:fixed;right:18px;bottom:calc(92px + env(safe-area-inset-bottom));height:52px;padding:0 20px;border-radius:26px;background:var(--gold);color:#10262B;font-weight:600;box-shadow:0 10px 24px rgba(201,162,76,.45);display:flex;align-items:center;gap:8px;z-index:9}
@@ -277,9 +277,9 @@
   .seg3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   .filters .chip{white-space:nowrap;flex:none}
   .sel{outline:2px solid var(--gold);outline-offset:-2px}
-  .photo{display:inline-flex;gap:6px;align-items:center;color:var(--brand-2);font-weight:500;font-size:13px;margin-top:6px}
+  .photo{display:inline-flex;gap:6px;align-items:center;color:var(--info);font-weight:500;font-size:13px;margin-top:6px}
   .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;margin-top:10px} .kv b{font-weight:500;color:var(--muted)}
-  .msgbox{margin-top:14px;background:#E7F6E2;border-radius:14px 14px 14px 4px;padding:14px;font-size:13.5px;line-height:1.55;color:#17252B;white-space:pre-wrap;max-height:46vh;overflow:auto}
+  .msgbox{margin-top:14px;background:var(--msg,#E7F6E2);border-radius:14px 14px 14px 4px;padding:14px;font-size:13.5px;line-height:1.55;color:#17252B;white-space:pre-wrap;max-height:46vh;overflow:auto}
 .dots i.fi{background:#D9822B}
 </style>
 </head>
@@ -794,7 +794,7 @@ function spendHtml(){
       '<span class="ico" style="width:30px;height:30px;border-radius:9px'+(c.asset?';background:var(--blue-soft)':'')+'">'+svg(CAT_ICON[c.name]).replace('<svg','<svg style="width:17px;height:17px"')+'</span>'+
       '<div class="rmain"><div class="rname" style="font-size:14px">'+esc(c.name)+'</div><div class="rsub">'+c.count+' bill'+(c.count>1?'s':'')+'</div></div>'+
       '<b>'+inr(c.amount)+'</b></div>'+
-      '<div style="height:6px;background:#EFEDE7;border-radius:6px;margin:8px 0 0 40px"><div style="height:6px;border-radius:6px;background:'+(c.asset?'var(--brand-2)':'var(--gold)')+';width:'+Math.max(3,Math.round(c.amount/max*100))+'%"></div></div></div>';
+      '<div style="height:6px;background:var(--track);border-radius:6px;margin:8px 0 0 40px"><div style="height:6px;border-radius:6px;background:'+(c.asset?'var(--info)':'var(--gold)')+';width:'+Math.max(3,Math.round(c.amount/max*100))+'%"></div></div></div>';
   }).join('') : '<div class="empty" style="padding:14px">No prices entered for this month yet.</div>';
   return '<div class="card">'+nav+rows+'<div class="hint" style="margin-top:10px">From the Rate / Cost you enter on purchases, repairs and services. Visible only in Admin.</div></div>';
 }
@@ -961,7 +961,7 @@ function drawMonth(){
     var dots=on.slice(0,4).map(function(x){ return '<i class="'+(x.status==='Overdue'?'over':x.status==='Done'?'dn':x.kind==='ev'||x.kind==='amc'?'ev':x.kind==='fire'?'fi':'')+'"></i>'; }).join('');
     html+='<button class="day'+(day.slice(0,7)!==first.slice(0,7)?' dim':'')+(day===t?' today':'')+(day===S.selDay?' sel':'')+'" onclick="S.selDay=\''+day+'\';drawMonth()">'+dObj(day).getUTCDate()+'<span class="dots">'+dots+'</span></button>';
   }
-  html+='</div><div class="legend"><span><i style="background:var(--brand-2)"></i>Job</span><span><i style="background:var(--gold)"></i>Event / AMC</span><span><i style="background:#D9822B"></i>Fire</span><span><i style="background:var(--bad)"></i>Overdue</span><span><i style="background:var(--ok)"></i>Done</span></div></div>';
+  html+='</div><div class="legend"><span><i style="background:var(--info)"></i>Job</span><span><i style="background:var(--gold)"></i>Event / AMC</span><span><i style="background:#D9822B"></i>Fire</span><span><i style="background:var(--bad)"></i>Overdue</span><span><i style="background:var(--ok)"></i>Done</span></div></div>';
   var sel=all.filter(function(x){ return x.start<=S.selDay && x.end>=S.selDay; });
   html+='<div class="h2">'+fmtD(S.selDay)+'</div>'+(sel.length ? '<div class="list">'+sel.map(instRow).join('')+'</div>' : '<div class="card empty">Free day — nothing planned.</div>');
   $('calBody').innerHTML=html;
@@ -1323,18 +1323,22 @@ function renderReqForm(){
       '<div class="hint">In stock: '+fmtN(it.stock)+' '+esc(it.u)+'</div></div>'+
       '<div class="field"><div class="label">Quantity</div><div class="stepper"><button onclick="rfStep(-1)">−</button><input id="rf_qty" type="number" inputmode="decimal" value="'+esc(f.qty)+'"><button onclick="rfStep(1)">+</button><span class="unit">'+esc(it.u)+'</span></div></div>'+
       '<div class="field"><div class="label">For what / where</div><input class="inp" id="rf_reason" placeholder="e.g. Tower B lobby lights" value="'+esc(f.reason)+'"></div>'+
-      '<button class="save" id="rfSave" onclick="saveReq()">Send request</button>':'<div class="empty">No items in this category.</div>')+'</div>';
+      '<button class="save" id="rfSave" onclick="sendMatReq()">Send request</button>':'<div class="empty">No items in this category.</div>')+'</div>';
 }
 function rfRead(){ var q=$('rf_qty'), r=$('rf_reason'); if(q) S.rf.qty=q.value; if(r) S.rf.reason=r.value; }
 function rfStep(d){ rfRead(); S.rf.qty=Math.max(1,(Number(S.rf.qty)||0)+d); $('rf_qty').value=S.rf.qty; }
-function saveReq(){ rfRead(); var f=S.rf, c=S.data.cats[f.ci], it=c.items[f.ii];
+function sendMatReq(){ rfRead(); var f=S.rf, c=S.data.cats[f.ci], it=c.items[f.ii];
   if(!(Number(f.qty)>0)) return toast('Enter the quantity'); btnBusy('rfSave','Sending…');
   call('addRequest',[S.pin,S.who,{cat:c.name,item:it.n,qty:f.qty,u:it.u,reason:f.reason}], function(d){ S.rf=null; S.data=d; updateOutCount(); toast(d.msg); wgo('req'); }, failBtn('rfSave','Send request')); }
 
 /* ------------------------------------------------------------ tankers */
 function renderTankEntry(){
-  var v=V(), f=S.tk||(S.tk={n:1,vendor:v.tankVendors[0]||''}), today=v.tankToday, tot=today.reduce(function(a,b){return a+b.n},0);
-  $('view').innerHTML=crumbBtn('Work',"S.tk=null;wgo('home')")+'<div class="card" style="text-align:center"><div class="tname" style="font-size:18px">Tankers arrived</div><div class="rsub">'+esc(S.data.today)+'</div>'+
+  var v=V(), t=S.data.todayIso, f=S.tk||(S.tk={n:1,vendor:v.tankVendors[0]||'',date:t}), today=v.tankToday, tot=today.reduce(function(a,b){return a+b.n},0);
+  var canPast=isMgr()&&S.isAdmin; if(!f.date||!canPast) f.date=t; var past=f.date!==t, minD='';
+  $('view').innerHTML=crumbBtn('Work',"S.tk=null;wgo('home')")+'<div class="card" style="text-align:center"><div class="tname" style="font-size:18px">Tankers arrived</div>'+
+    (canPast?'<div class="seg" style="justify-content:center;margin-top:10px"><button class="chip'+(!past?' on':'')+'" onclick="S.tk.date=\''+t+'\';renderTankEntry()">Today</button><button class="chip'+(f.date===isoAdd(t,-1)?' on':'')+'" onclick="S.tk.date=\''+isoAdd(t,-1)+'\';renderTankEntry()">Yesterday</button>'+
+    '<input class="inp" type="date" style="width:auto;padding:8px 10px" value="'+f.date+'" max="'+t+'"'+(minD?' min="'+minD+'"':'')+' onchange="if(this.value&&this.value<=\''+t+'\'){S.tk.date=this.value;renderTankEntry()}"></div>':'')+
+    '<div class="rsub" style="margin-top:6px;'+(past?'color:var(--warn);font-weight:600':'')+'">'+(past?'Entering for '+fmtD(f.date)+' (a past day)':esc(S.data.today))+'</div>'+
     '<div class="step2"><button onclick="S.tk.n=Math.max(1,S.tk.n-1);$(\'tkN\').textContent=S.tk.n">−</button><div class="big" id="tkN">'+f.n+'</div><button onclick="S.tk.n=Math.min(50,S.tk.n+1);$(\'tkN\').textContent=S.tk.n">+</button></div>'+
     '<div class="field" style="text-align:left"><div class="label">Vendor (optional)</div>'+(v.tankVendors.length?'<div class="seg" style="margin-bottom:8px">'+v.tankVendors.map(function(n){return '<button class="chip'+(n===f.vendor?' on':'')+'" onclick="S.tk.vendor=\''+jsq(n)+'\';renderTankEntry()">'+esc(n)+'</button>'}).join('')+'</div>':'')+
       '<input class="inp" id="tk_v" placeholder="Vendor name" value="'+esc(f.vendor)+'" oninput="S.tk.vendor=this.value"></div>'+
@@ -1342,25 +1346,25 @@ function renderTankEntry(){
     '<div class="hint">'+(today.length?'Today so far: <b>'+tot+'</b> — '+today.map(function(x){return x.n+' at '+esc(x.time)+(x.vendor?' ('+esc(x.vendor)+')':'')}).join(' · '):'Nothing entered yet today.')+'</div></div>'+
     (isMgr()?'<button class="btn2 full" style="width:100%;margin-top:12px" onclick="needAdmin(function(){wgo(\'tankAdmin\')})">See monthly report</button>':'');
 }
-function saveTank(){ btnBusy('tkSave'); call('addTanker',[S.pin,S.who,{n:S.tk.n,vendor:S.tk.vendor}], function(d){ S.tk={n:1,vendor:S.tk.vendor}; S.data=d; toast(d.msg); renderTankEntry(); }, failBtn('tkSave','Save')); }
+function saveTank(){ var dt=S.tk.date||S.data.todayIso; btnBusy('tkSave'); call('addTanker',[S.pin,S.who,{n:S.tk.n,vendor:S.tk.vendor,date:dt,apin:S.isAdmin?S.apin:''}], function(d){ S.tk={n:1,vendor:S.tk.vendor,date:dt}; S.data=d; S.tkm=null; toast(dt===d.todayIso?d.msg:d.msg.replace('saved','saved for '+fmtD(dt,false))); renderTankEntry(); }, failBtn('tkSave','Save')); }
 function renderTankAdmin(){
   if (!S.tkm || S.tkm.ym!==(S.tkYm||S.tkm.ym)){ $('view').innerHTML=crumbBtn('Work',"wgo('home')")+'<div class="card loading"><div class="spin"></div>Loading…</div>';
     return call('getTankers',[S.pin,S.apin,S.tkYm||''], function(r){ S.tkm=r; S.tkYm=r.ym; renderTankAdmin(); }); }
   var r=S.tkm, mx=Math.max(4,Math.max.apply(null,r.days)), W=326,H=150,pl=22,pb=22,pt=10,bw=(W-pl)/r.days.length;
   var y=function(v){ return pt+(H-pt-pb)*(1-v/mx); }, step=mx<=6?2:mx<=12?4:Math.ceil(mx/3);
   var grid=''; for(var g=0;g<=mx;g+=step) grid+='<line x1="'+pl+'" x2="'+W+'" y1="'+y(g).toFixed(1)+'" y2="'+y(g).toFixed(1)+'" stroke="var(--line)"/><text x="'+(pl-6)+'" y="'+(y(g)+4).toFixed(1)+'" font-size="10" text-anchor="end" fill="var(--muted)">'+g+'</text>';
-  var bars=r.days.map(function(v,i){ return v?'<rect x="'+(pl+i*bw+1.2).toFixed(1)+'" y="'+y(v).toFixed(1)+'" width="'+Math.max(2,bw-2.4).toFixed(1)+'" height="'+(H-pb-y(v)).toFixed(1)+'" rx="2" fill="var(--brand-2)"><title>'+(i+1)+': '+v+'</title></rect>':''; }).join('');
+  var bars=r.days.map(function(v,i){ return v?'<rect x="'+(pl+i*bw+1.2).toFixed(1)+'" y="'+y(v).toFixed(1)+'" width="'+Math.max(2,bw-2.4).toFixed(1)+'" height="'+(H-pb-y(v)).toFixed(1)+'" rx="2" fill="var(--info)"><title>'+(i+1)+': '+v+'</title></rect>':''; }).join('');
   var xl=[1,8,15,22,r.days.length].map(function(d){ return '<text x="'+(pl+(d-1)*bw+bw/2).toFixed(1)+'" y="'+(H-6)+'" font-size="10" text-anchor="middle" fill="var(--muted)">'+d+'</text>'; }).join('');
   var avg=r.avg?'<line x1="'+pl+'" x2="'+W+'" y1="'+y(r.avg).toFixed(1)+'" y2="'+y(r.avg).toFixed(1)+'" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="4 3"/><text x="'+W+'" y="'+(y(r.avg)-5).toFixed(1)+'" font-size="10.5" text-anchor="end" fill="var(--gold)" font-weight="600">avg '+r.avg+'/day</text>':'';
   var pd=r.ym.split('-'), prevDays=new Date(Date.UTC(+pd[0],+pd[1]-1,0)).getUTCDate(), prevAvg=Math.round(r.prevTotal/prevDays*10)/10, mn=r.label.split(' ')[0].slice(0,3), hi=-1,lo=-1; r.days.forEach(function(v,i){ if(i<r.elapsed||r.elapsed===0){ if(hi<0||v>r.days[hi]) hi=i; if(lo<0||v<r.days[lo]) lo=i; } });
-  $('view').innerHTML=crumbBtn('Work',"S.tkm=null;S.tkYm=null;wgo('home')")+'<div class="card"><div class="mhead"><button class="back" onclick="S.tkYm=addMonths(S.tkm.ym+\'-15\',-1).slice(0,7);renderTankAdmin()">‹</button><b>'+esc(r.label)+'</b>'+
+  $('view').innerHTML=crumbBtn('Work',"S.tkm=null;S.tkYm=null;wgo('home')")+'<button class="btn2 pri" style="width:100%;margin-bottom:12px" onclick="S.tk=null;S.tkm=null;wgo(\'tank\')">+ Add tankers (today or a past day)</button><div class="card"><div class="mhead"><button class="back" onclick="S.tkYm=addMonths(S.tkm.ym+\'-15\',-1).slice(0,7);renderTankAdmin()">‹</button><b>'+esc(r.label)+'</b>'+
     '<button class="back" '+(r.ym>=S.data.todayIso.slice(0,7)?'disabled style="opacity:.3"':'onclick="S.tkYm=addMonths(S.tkm.ym+\'-15\',1).slice(0,7);renderTankAdmin()"')+'>›</button></div>'+
     '<div class="stats" style="margin:4px 0 14px"><div class="stat" style="box-shadow:none"><b>'+r.total+'</b><span>Total tankers</span></div><div class="stat" style="box-shadow:none"><b>'+r.avg+'</b><span>Average / day</span></div>'+
     '<div class="stat" style="box-shadow:none"><b>'+r.prevTotal+'</b><span>'+esc(r.prevLabel.split(' ')[0])+' total · avg '+prevAvg+'/day</span></div></div>'+
     '<div class="label">Tankers per day</div><svg width="100%" viewBox="0 0 '+W+' '+H+'" style="font-family:var(--sans)">'+grid+bars+avg+xl+'</svg>'+
     (r.total?'<div class="rsub" style="margin-top:6px">Highest: '+(hi+1)+' '+mn+' ('+r.days[hi]+') · Lowest: '+(lo+1)+' '+mn+' ('+r.days[lo]+')'+(r.avg>prevAvg?' · ▲ busier than '+mn.replace(/.*/,'')+'last month':r.avg<prevAvg?' · ▼ less than last month':'')+'</div>':'')+'</div>'+
     (r.vendors.length?'<div class="h2">By vendor</div><div class="list">'+r.vendors.map(function(x){return '<div class="row"><div class="rmain"><div class="rname">'+esc(x.name)+'</div></div><b style="font-family:var(--serif)">'+x.n+'</b></div>'}).join('')+'</div>':'')+
-    '<div class="h2">Day by day</div>'+(r.list.length?'<div class="list">'+r.list.map(function(x){return '<div class="row"><div class="rmain"><div class="rname">'+fmtD(x.date)+' · '+esc(x.time)+'</div><div class="rsub">'+esc(x.vendor||'—')+' · by '+esc(x.by)+'</div></div><b style="font-family:var(--serif)">'+x.n+'</b>'+
+    '<div class="h2">Day by day</div>'+(r.list.length?'<div class="list">'+r.list.map(function(x){return '<div class="row"><div class="rmain"><div class="rname">'+fmtD(x.date)+(x.time?' · '+esc(x.time):'')+'</div><div class="rsub">'+esc(x.vendor||'—')+' · by '+esc(x.by)+'</div></div><b style="font-family:var(--serif)">'+x.n+'</b>'+
       '<button class="chev" style="margin-left:10px" onclick="delTank(\''+x.id+'\')">✕</button></div>'}).join('')+'</div>':'<div class="card empty">No tankers this month.</div>');
 }
 function delTank(id){ if(!confirm('Remove this tanker entry?')) return; call('deleteTanker',[S.pin,S.apin,id], function(r){ S.tkm=r; renderTankAdmin(); toast('Removed'); }); }
@@ -1449,7 +1453,7 @@ function renderFire(){
   S.fd=list;
   $('view').innerHTML=crumbBtn('Work',"wgo('home')")+'<div class="card"><div class="tname" style="font-size:18px">Fire safety</div><div class="rsub">Pump runs, alarm, hose reels and extinguishers</div></div>'+
     '<div class="h2">Checks</div><div class="list">'+(list.length?list.map(function(x,i){ var st=x.done?(x.done.result==='OK'?'Done ✓':'Problem'):x.due<t?'Overdue':x.due===t?'Due today':'Next';
-      return '<button class="job'+(x.done?' isdone':x.due<t?' over':'')+'" onclick="S.fcur='+i+';wgo(\'fireCheck\')"><span class="bar" style="background:'+(x.done?'var(--ok)':x.due<=t?'var(--bad)':'var(--brand-2)')+'"></span><div class="rmain"><div class="rname">'+esc(x.c.name)+'</div><div class="rsub">'+esc(x.c.freq)+' · '+fmtD(x.due)+(x.done?' · '+esc(x.done.by):'')+'</div></div>'+
+      return '<button class="job'+(x.done?' isdone':x.due<t?' over':'')+'" onclick="S.fcur='+i+';wgo(\'fireCheck\')"><span class="bar" style="background:'+(x.done?'var(--ok)':x.due<=t?'var(--bad)':'var(--info)')+'"></span><div class="rmain"><div class="rname">'+esc(x.c.name)+'</div><div class="rsub">'+esc(x.c.freq)+' · '+fmtD(x.due)+(x.done?' · '+esc(x.done.by):'')+'</div></div>'+
         '<span class="pill '+(x.done?(x.done.result==='OK'?'ok':'bad'):x.due<=t?'bad':'neutral')+'">'+st+'</span></button>'; }).join(''):'<div class="empty">No checks set up.</div>')+'</div>'+
     '<div class="h2">Fire extinguishers</div><div class="actions">'+
       '<button class="action" onclick="wgo(\'fex\')"><span class="ico">'+svg('check')+'</span><span>Monthly check<div class="rsub">'+notChecked+' not checked this month</div></span></button>'+
@@ -1545,8 +1549,8 @@ function renderPay(){
   var list=p.filter(function(x){return f==='all'||x.status===f});
   $('view').innerHTML=crumbBtn('Admin',"S.av='home';renderAdmin()")+'<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="label" style="margin:0">Vendor payments · only you</div><div class="tname" style="font-size:19px;margin-top:4px">'+esc(S.adm.month)+'</div></div>'+
     '<div style="text-align:right"><div class="money">'+inr(tot)+'</div><div class="rsub">'+p.length+' bills</div></div></div>'+
-    (tot?'<div style="display:flex;gap:2px;height:10px;border-radius:6px;overflow:hidden;margin-top:12px">'+seg(P,'var(--ok)')+seg(L,'var(--brand-2)')+seg(N,'var(--warn)')+'</div>':'')+
-    '<div class="stats" style="margin-top:12px"><div class="stat" style="box-shadow:none"><b style="font-size:17px;color:var(--ok)">'+inr(P)+'</b><span>Paid · '+cnt('Paid')+'</span></div><div class="stat" style="box-shadow:none"><b style="font-size:17px;color:var(--brand-2)">'+inr(L)+'</b><span>Loaded · '+cnt('Loaded')+'</span></div>'+
+    (tot?'<div style="display:flex;gap:2px;height:10px;border-radius:6px;overflow:hidden;margin-top:12px">'+seg(P,'var(--ok)')+seg(L,'var(--info)')+seg(N,'var(--warn)')+'</div>':'')+
+    '<div class="stats" style="margin-top:12px"><div class="stat" style="box-shadow:none"><b style="font-size:17px;color:var(--ok)">'+inr(P)+'</b><span>Paid · '+cnt('Paid')+'</span></div><div class="stat" style="box-shadow:none"><b style="font-size:17px;color:var(--info)">'+inr(L)+'</b><span>Loaded · '+cnt('Loaded')+'</span></div>'+
     '<div class="stat" style="box-shadow:none"><b style="font-size:17px;color:var(--warn)">'+inr(N)+'</b><span>Pending · '+cnt('Pending')+'</span></div></div>'+
     '<div class="btns" style="margin-top:14px"><button class="btn2" onclick="payForm(-1)">+ Add bill</button><button class="btn2 pri" onclick="sharePay()">Share summary</button></div></div>'+
     '<div class="filters" style="margin-top:12px">'+[['all','All '+p.length],['Pending','Pending '+cnt('Pending')],['Loaded','Loaded '+cnt('Loaded')],['Paid','Paid '+cnt('Paid')]].map(function(x){return '<button class="chip'+(f===x[0]?' on':'')+'" onclick="S.payF=\''+x[0]+'\';renderPay()">'+x[1]+'</button>'}).join('')+'</div>'+
@@ -1612,7 +1616,7 @@ var WX_LAT=13.0256, WX_LNG=77.6510;
 function drawDate(){ var w=S.wx, fest=festival(); $('today').innerHTML=esc(S.data.today)+(fest&&fest.greet?' · '+esc(fest.greet):'')+(w&&w.temp!=null?'<span class="tchip" onclick="wxInfo()" style="cursor:pointer">'+wxIcon(w)+Math.round(w.temp)+'°C</span>':''); }
 // The forecast code can say "showers" for the hour even when it is sunny right now,
 // so rain is shown only when rain is actually falling (measured in the last 15 minutes).
-var APP_VER='4.4';
+var APP_VER='4.7';
 function realCode(c){ var code=+c.weather_code||0, pr=+c.precipitation||0, cc=c.cloud_cover==null?50:+c.cloud_cover;
   if (pr>=0.5 && cc>=60) return wxRain(code)?code:61;             // only real, steady rain
   if (wxRain(code)) return cc>=80?3:cc>=40?2:1;
