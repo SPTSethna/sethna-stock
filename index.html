@@ -1230,7 +1230,8 @@ function renderWork(){
     ['bulb','Common area work', open.length+' open'+(mgr?'':' · '+mine.length+' for you'), open.filter(function(w){return w.urgent}).length?open.filter(function(w){return w.urgent}).length+' urgent':'', 'bad', "wgo('work')"],
     ['box','Material requests', mgr? pend.length+' waiting for you' : myReq.length+' of yours pending', mgr&&pend.length?pend.length+' new':'', 'warn', "wgo('req')"],
     ['tank', mgr?'Tanker log':'Tanker entry', tankN+' today', '', '', mgr?"needAdmin(function(){wgo('tankAdmin')})":"wgo('tank')"],
-    ['meter','Water meters', MT().names.map(function(n){ return n+(MT().today[n]?' ✓':''); }).join(' · '), metersDue()?metersDue()+' due':'', 'warn', mgr?"needAdmin(function(){S.mr=null;S.mrYm=null;wgo('meterRep')})":"S.mf=null;wgo('meter')"],
+    ['meter','Cauvery water', mtrTileMeta('Cauvery'), MT().today['Cauvery']?'':'1 due', 'warn', mgr?"needAdmin(function(){S.mrMeter='Cauvery';S.mr=null;S.mrYm=null;wgo('meterRep')})":"S.mf={meter:'Cauvery'};wgo('meter')"],
+    ['meter','STP treated water', mtrTileMeta('STP treated'), MT().today['STP treated']?'':'1 due', 'warn', mgr?"needAdmin(function(){S.mrMeter='STP treated';S.mr=null;S.mrYm=null;wgo('meterRep')})":"S.mf={meter:'STP treated'};wgo('meter')"],
     ['flame','Fire safety', due.length? due.length+' check'+(due.length>1?'s':'')+' due' : 'Checks up to date', due.length?due.length+' due':(mgr&&fexDue?fexDue+' refill'+(fexDue>1?'s':'')+' due':''), due.length?'bad':'warn', "wgo('fire')"],
     ['alert','Report a problem','Camera, borewell, motor, extinguisher','','',"wgo('report')"]];
   if (mgr) tiles.push(['doc','AMC & vendors', amcLine(), '', '', "needAdmin(function(){wgo('amc')})"],
@@ -1615,28 +1616,31 @@ function setCond(c){ call('setAssetCondition',[S.pin,S.apin,S.astCur.type,S.astC
 
 /* ============================================================ water meters (Cauvery + STP treated) */
 function MT(){ return V().meters || {names:['Cauvery','STP treated'],last:{},today:{},normal:{}}; }
+function mtrWord(n){ return n==='Cauvery'?'came in':'generated'; }
+function mtrTitle(n){ return n==='Cauvery'?'Cauvery water':'STP treated water'; }
+function mtrTileMeta(n){ var d=MT().today[n]; return d ? 'Done today ✓'+(d.diff!==''?' · '+kl(d.diff)+' kL':'') : 'Not read today'; }
 function metersDue(){ var m=MT(); return m.names.filter(function(n){ return !m.today[n]; }).length; }
 function kl(n){ return n===''||n==null ? '' : Number(n).toLocaleString('en-IN',{maximumFractionDigits:2}); }
 function mtrNum(s){ var n=parseFloat(String(s||'').replace(/[^\d.]/g,'')); return isNaN(n)?0:n; }
 function renderMeterEntry(){
   var m=MT(), t=S.data.todayIso, canPast=isMgr()&&S.isAdmin;
-  var f=S.mf||(S.mf={meter:m.names[0],date:t,val:'',note:'',photo:''}); if(!canPast) f.date=t;
+  var f=S.mf||(S.mf={meter:m.names[0]}); if(!f.meter) f.meter=m.names[0]; if(!f.date||!canPast) f.date=t; if(f.val==null) f.val=''; if(f.note==null) f.note=''; if(f.photo==null) f.photo='';
   var past=f.date!==t, today=m.today[f.meter];
   var prev = past ? (S.mfPrev&&S.mfPrev.meter===f.meter&&S.mfPrev.date===f.date ? S.mfPrev.prev : null) : (m.last[f.meter]||null);
   if (past && !(S.mfPrev&&S.mfPrev.meter===f.meter&&S.mfPrev.date===f.date)) mfLoadPrev();
-  var h=crumbBtn('Work',"S.mf=null;wgo('home')")+'<div class="card"><div class="tname" style="font-size:18px">Water meter reading</div>'+
+  var h=crumbBtn('Work',"S.mf=null;wgo('home')")+'<div class="card"><div class="tname" style="font-size:18px">'+esc(mtrTitle(f.meter))+' meter</div>'+
     (canPast?'<div class="seg" style="margin-top:10px"><button class="chip'+(!past?' on':'')+'" onclick="mfRead();S.mf.date=\''+t+'\';renderMeterEntry()">Today</button><button class="chip'+(f.date===isoAdd(t,-1)?' on':'')+'" onclick="mfRead();S.mf.date=\''+isoAdd(t,-1)+'\';renderMeterEntry()">Yesterday</button>'+
       '<input class="inp" type="date" style="width:auto;padding:8px 10px" value="'+f.date+'" max="'+t+'" onchange="if(this.value&&this.value<=\''+t+'\'){mfRead();S.mf.date=this.value;renderMeterEntry()}"></div>'+
       (past?'<div class="rsub" style="margin-top:6px;color:var(--warn);font-weight:600">Entering for '+fmtD(f.date)+' (a past day) — only you can do this</div>':'<div class="rsub" style="margin-top:6px">'+esc(S.data.today)+'</div>')
      :'<div class="rsub">'+esc(S.data.today)+' · today only</div>')+
-    '<div class="field"><div class="label">Meter</div><div class="seg2" style="margin:0">'+m.names.map(function(n){ return '<button class="'+(n===f.meter?'on':'')+'" onclick="mfRead();S.mf.meter=\''+jsq(n)+'\';S.mf.val=\'\';renderMeterEntry()">'+esc(n)+(m.today[n]?' ✓':'')+'</button>'; }).join('')+'</div></div>';
+    '';
   if (today && !past && !canPast){
     h+='<div class="card" style="box-shadow:none;background:var(--ok-soft);border:0;margin-top:14px;padding:14px"><b style="color:var(--ok);font-size:16px">Done for today ✓</b>'+
-      '<div class="rsub" style="margin-top:4px">'+kl(today.reading)+' kL · '+esc(today.by)+(today.time?' · '+esc(today.time):'')+(today.diff!==''?' · <b>'+kl(today.diff)+' kL</b> since last':'')+'</div>'+
+      '<div class="rsub" style="margin-top:4px">'+kl(today.reading)+' kL · '+esc(today.by)+(today.time?' · '+esc(today.time):'')+(today.diff!==''?' · <b>'+kl(today.diff)+' kL</b> '+mtrWord(f.meter):'')+'</div>'+
       '<div class="rsub" style="margin-top:6px">Wrong number? Ask the manager to correct it.</div></div></div>';
     $('view').innerHTML=h; return;
   }
-  h+='<div class="kv" style="margin-top:14px"><b>Previous reading</b><span>'+(past&&prev===null?'Checking…':prev?'<b>'+kl(prev.reading)+'</b> kL · '+(prev.date===isoAdd(f.date,-1)?(past?fmtD(prev.date,false):'yesterday'):fmtD(prev.date,false))+(prev.time?' '+esc(prev.time):'')+(prev.by?' · '+esc(prev.by):''):'None yet — this will be the first reading')+'</span>'+
+  h+='<div class="kv" style="margin-top:14px"><b>Previous reading</b><span>'+(past&&prev===null?'Checking…':prev?'<b>'+kl(prev.reading)+'</b> kL · '+(prev.date===isoAdd(f.date,-1)?(past?fmtD(prev.date,false):'yesterday'):fmtD(prev.date,false))+(prev.time?' '+esc(prev.time):'')+(prev.by?' · '+esc(prev.by):''):'None yet')+'</span>'+
       (m.normal[f.meter]?'<b>Normal use</b><span>about '+kl(m.normal[f.meter])+' kL a day</span>':'')+
       (today&&!past?'<b>Today</b><span>'+kl(today.reading)+' kL already saved by '+esc(today.by)+' — saving again replaces it</span>':'')+
       (past&&S.mfPrev&&S.mfPrev.date===f.date&&S.mfPrev.meter===f.meter&&S.mfPrev.same?'<b>That day</b><span>'+kl(S.mfPrev.same.reading)+' kL already saved by '+esc(S.mfPrev.same.by)+' — saving again replaces it</span>':'')+'</div>'+
@@ -1646,7 +1650,7 @@ function renderMeterEntry(){
       '<span id="mf_ph">'+(f.photo?'Photo added ✓':'Add photo')+'</span><input type="file" accept="image/*" capture="environment" style="display:none" onchange="mfPhoto(this)"></label></div>'+
       '<div><div class="label">Note</div><input class="inp" id="mf_note" placeholder="Optional" value="'+esc(f.note)+'"></div></div>'+
     '<button class="save" id="mfSave" onclick="saveMeter()">Save reading</button></div>'+
-    (canPast?'<button class="btn2 full" style="width:100%;margin-top:12px" onclick="S.mf=null;S.mr=null;wgo(\'meterRep\')">See monthly report</button>':'');
+    (canPast?'<button class="btn2 full" style="width:100%;margin-top:12px" onclick="S.mrMeter=S.mf.meter;S.mf=null;S.mr=null;S.mrYm=null;wgo(\'meterRep\')">See monthly report</button>':'');
   $('view').innerHTML=h; S.mfPrevShown=prev; mfDiff();
 }
 function mfRead(){ var v=$('mf_val'), n=$('mf_note'); if(v) S.mf.val=v.value; if(n) S.mf.note=n.value; }
@@ -1663,9 +1667,10 @@ function mfLoadPrev(){ var f=S.mf, key=f.meter+'|'+f.date;
   }, function(e){ S.mfLoading=''; onErr(e); });
 }
 function mfDiff(){ var box=$('mf_diff'); if(!box) return; var f=S.mf, prev=S.mfPrevShown, v=mtrNum(f.val), m=MT();
+  if (v && !prev && !(f.date!==S.data.todayIso && S.mfPrevShown===null)){ box.innerHTML='<div class="card" style="box-shadow:none;background:var(--blue-soft);border:0;margin-top:10px;padding:12px 14px"><b style="color:var(--info);font-size:16px">This is the starting reading</b><div class="rsub">The water '+mtrWord(f.meter)+' is shown from the next reading: next reading − this reading.</div></div>'; return; }
   if (!v || !prev){ box.innerHTML=''; return; }
   var d=Math.round((v-prev.reading)*100)/100, span=Math.max(1,dayDiff(prev.date,f.date)), nm=m.normal[f.meter], per=d/span;
-  var lbl=f.meter==='Cauvery'?'came in':'treated';
+  var lbl=mtrWord(f.meter);
   if (d<0){ box.innerHTML='<div class="card" style="box-shadow:none;background:var(--bad-soft);border:0;margin-top:10px;padding:12px 14px"><b style="color:var(--bad);font-size:16px">Lower than the previous reading</b><div class="rsub">'+kl(v)+' is less than '+kl(prev.reading)+'. Please check the meter again.</div></div>'; return; }
   var high = nm && per>nm*2.5, col=high?'var(--warn)':'var(--ok)', bg=high?'var(--warn-soft)':'var(--ok-soft)';
   box.innerHTML='<div class="card" style="box-shadow:none;background:'+bg+';border:0;margin-top:10px;padding:12px 14px"><div class="rsub" style="margin:0 0 2px">'+kl(v)+' − '+kl(prev.reading)+' =</div>'+
@@ -1678,14 +1683,13 @@ function saveMeter(){ mfRead(); var f=S.mf, v=mtrNum(f.val); if(!v) return toast
   btnBusy('mfSave');
   call('addMeterReading',[S.pin,S.who,{meter:f.meter,reading:v,date:f.date,note:f.note,apin:(isMgr()&&S.isAdmin)?S.apin:''},f.photo?{data:f.photo}:null], function(d){
     S.data=d; updateOutCount(); toast(d.msg||'Saved'); S.mr=null; S.mfPrev=null;
-    var next=MT().names.filter(function(n){ return !MT().today[n] && n!==f.meter; })[0];
-    S.mf={meter:(f.date===d.todayIso&&next)?next:f.meter,date:f.date,val:'',note:'',photo:''}; renderMeterEntry(); window.scrollTo(0,0);
+    S.mf={meter:f.meter,date:f.date,val:'',note:'',photo:''}; renderMeterEntry(); window.scrollTo(0,0);
   }, failBtn('mfSave','Save reading')); }
 function renderMeterRep(){
   var meter=S.mrMeter||MT().names[0];
   if (!S.mr || S.mr.meter!==meter || (S.mrYm && S.mr.ym!==S.mrYm)){ $('view').innerHTML=crumbBtn('Work',"wgo('home')")+'<div class="card loading"><div class="spin"></div>Loading…</div>';
     return call('getMeterReport',[S.pin,S.apin,meter,S.mrYm||''], function(r){ S.mr=r; S.mrYm=r.ym; renderMeterRep(); }); }
-  var r=S.mr, lbl=meter==='Cauvery'?'came in':'treated', color=meter==='Cauvery'?'#2A8FA8':'#2E9E6A';
+  var r=S.mr, lbl=mtrWord(meter), color=meter==='Cauvery'?'#2A8FA8':'#2E9E6A';
   var mxv=Math.max.apply(null,r.days.concat([10])), mx=Math.ceil(mxv/20)*20, W=326,H=150,pl=26,pb=22,pt=10,bw=(W-pl)/r.days.length;
   var y=function(v){ return pt+(H-pt-pb)*(1-v/mx); }, step=mx<=40?10:mx<=100?20:mx<=200?50:100, grid='';
   for(var g=0;g<=mx;g+=step) grid+='<line x1="'+pl+'" x2="'+W+'" y1="'+y(g).toFixed(1)+'" y2="'+y(g).toFixed(1)+'" stroke="var(--line)"/><text x="'+(pl-6)+'" y="'+(y(g)+4).toFixed(1)+'" font-size="10" text-anchor="end" fill="var(--muted)">'+g+'</text>';
@@ -1695,17 +1699,17 @@ function renderMeterRep(){
   var mn=r.label.split(' ')[0].slice(0,3);
   $('view').innerHTML=crumbBtn('Work',"S.mr=null;S.mrYm=null;wgo('home')")+
     '<button class="btn2 pri" style="width:100%;margin-bottom:12px" onclick="S.mf={meter:\''+jsq(meter)+'\',date:S.data.todayIso,val:\'\',note:\'\',photo:\'\'};S.mfPrev=null;wgo(\'meter\')">+ Add reading (today or a past day)</button>'+
-    '<div class="seg2">'+r.meters.map(function(n){ return '<button class="'+(n===meter?'on':'')+'" onclick="S.mrMeter=\''+jsq(n)+'\';renderMeterRep()">'+esc(n)+'</button>'; }).join('')+'</div>'+
+    '<div class="tname" style="font-size:19px;margin:2px 4px 12px">'+esc(mtrTitle(meter))+'</div>'+
     '<div class="card"><div class="mhead"><button class="back" onclick="S.mrYm=addMonths(S.mr.ym+\'-15\',-1).slice(0,7);renderMeterRep()">‹</button><b>'+esc(r.label)+'</b>'+
     '<button class="back" '+(r.ym>=S.data.todayIso.slice(0,7)?'disabled style="opacity:.3"':'onclick="S.mrYm=addMonths(S.mr.ym+\'-15\',1).slice(0,7);renderMeterRep()"')+'>›</button></div>'+
     '<div class="stats" style="margin:4px 0 14px"><div class="stat" style="box-shadow:none"><b>'+kl(r.total)+'</b><span>kL '+lbl+' this month</span></div><div class="stat" style="box-shadow:none"><b>'+kl(r.avg)+'</b><span>Average kL / day</span></div>'+
     '<div class="stat" style="box-shadow:none"><b>'+kl(r.prevTotal)+'</b><span>'+esc(r.prevLabel)+' total · avg '+kl(r.prevAvg)+'/day</span></div></div>'+
-    '<div class="label">kL per day (reading − previous reading)</div><svg width="100%" viewBox="0 0 '+W+' '+H+'" style="font-family:var(--sans)">'+grid+bars+avg+xl+'</svg>'+
-    (r.hi?'<div class="rsub" style="margin-top:6px">Highest: '+r.hi.day+' '+mn+' ('+kl(r.hi.v)+') · Lowest: '+r.lo.day+' '+mn+' ('+kl(r.lo.v)+')</div>':'<div class="rsub" style="margin-top:6px">No readings this month yet. You need two readings to see how much water came.</div>')+
+    '<div class="label">kL '+lbl+' per day (reading − previous reading)</div><svg width="100%" viewBox="0 0 '+W+' '+H+'" style="font-family:var(--sans)">'+grid+bars+avg+xl+'</svg>'+
+    (r.hi?'<div class="rsub" style="margin-top:6px">Highest: '+r.hi.day+' '+mn+' ('+kl(r.hi.v)+') · Lowest: '+r.lo.day+' '+mn+' ('+kl(r.lo.v)+')</div>':'<div class="rsub" style="margin-top:6px">'+(r.list.length?'Only the starting reading so far — the amount shows from the next reading.':'No readings this month yet.')+'</div>')+
     (r.last?'<div class="rsub">Latest reading: '+kl(r.last.reading)+' kL on '+fmtD(r.last.date,false)+'</div>':'')+'</div>'+
     '<div class="h2">Day by day</div>'+(r.list.length?'<div class="list">'+r.list.map(function(x){
       return '<div class="row"><div class="rmain"><div class="rname">'+fmtD(x.date)+(x.span>1?' <span class="rsub">('+x.span+' days)</span>':'')+'</div>'+
-        '<div class="rsub">'+(x.prev!==''?kl(x.reading)+' − '+kl(x.prev):kl(x.reading)+' · first reading')+' · '+esc(x.by)+(x.time?' · '+esc(x.time):'')+(x.photo?' · <a href="'+esc(x.photo)+'" target="_blank" style="color:var(--info)">photo</a>':'')+'</div>'+
+        '<div class="rsub">'+(x.prev!==''?kl(x.reading)+' − '+kl(x.prev):kl(x.reading)+' · starting reading')+' · '+esc(x.by)+(x.time?' · '+esc(x.time):'')+(x.photo?' · <a href="'+esc(x.photo)+'" target="_blank" style="color:var(--info)">photo</a>':'')+'</div>'+
         (x.note?'<div class="rsub">'+esc(x.note)+'</div>':'')+'</div><b style="font-family:var(--serif);font-size:17px">'+(x.diff!==''?kl(x.diff):'—')+'</b>'+
         '<button class="chev" style="margin-left:10px" onclick="delMeter(\''+x.id+'\')">✕</button></div>'; }).join('')+'</div>':'<div class="card empty">No readings this month.</div>');
 }
@@ -1717,7 +1721,7 @@ var WX_LAT=13.0256, WX_LNG=77.6510;
 function drawDate(){ var w=S.wx, fest=festival(); $('today').innerHTML=esc(S.data.today)+(fest&&fest.greet?' · '+esc(fest.greet):'')+(w&&w.temp!=null?'<span class="tchip" onclick="wxInfo()" style="cursor:pointer">'+wxIcon(w)+Math.round(w.temp)+'°C</span>':''); }
 // The forecast code can say "showers" for the hour even when it is sunny right now,
 // so rain is shown only when rain is actually falling (measured in the last 15 minutes).
-var APP_VER='4.8';
+var APP_VER='4.9';
 function realCode(c){ var code=+c.weather_code||0, pr=+c.precipitation||0, cc=c.cloud_cover==null?50:+c.cloud_cover;
   if (pr>=0.5 && cc>=60) return wxRain(code)?code:61;             // only real, steady rain
   if (wxRain(code)) return cc>=80?3:cc>=40?2:1;
