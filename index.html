@@ -358,6 +358,7 @@ var I = {
   repeat:'<path d="M4 11V9a3 3 0 0 1 3-3h12l-3-3M20 13v2a3 3 0 0 1-3 3H5l3 3"/>',
   list:'<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
   bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+  gen:'<rect x="3" y="7" width="15" height="11" rx="2"/><path d="M18 10h3v5h-3M7 7V5h7v2M11 10l-2 3h3l-2 3"/>',
   meter:'<circle cx="12" cy="13" r="8"/><path d="M12 13l4-3M8 5l1 2M16 5l-1 2"/>',
   bulb:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
   tank:'<path d="M3 15V8h11v7"/><path d="M14 10h4l3 3v2h-7"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M6 10.5c1 1.5 1 2.5 0 3"/>',
@@ -1190,7 +1191,7 @@ function fmtDN(iso){ return iso ? fmtD(iso,false)+' '+iso.slice(0,4) : ''; }
 /* ------------------------------------------------------------ badges, banners, quick actions */
 function workBadge(){ var v=V(), t=S.data.todayIso;
   if (isMgr()) return v.requests.filter(function(r){return r.status==='Pending'}).length + v.openReports.length + v.work.filter(function(w){return w.status!=='Done'&&w.urgent}).length;
-  return v.work.filter(function(w){return w.status!=='Done' && w.to===S.who}).length + fireDue().filter(function(f){return f.due<=t && !f.done}).length + metersDue(); }
+  return v.work.filter(function(w){return w.status!=='Done' && w.to===S.who}).length + fireDue().filter(function(f){return f.due<=t && !f.done}).length + metersDue() + dgDue(); }
 function problemsBanner(){ var r=V().openReports; if(!isMgr()||!r.length) return '';
   return '<button class="soon" style="border-left-color:var(--bad)" onclick="wgo(\'problems\')"><span class="ico" style="background:var(--bad-soft);color:var(--bad)">'+svg('alert')+'</span><div class="rmain"><b>'+r.length+' problem'+(r.length>1?'s':'')+' reported</b><div class="rsub">'+
     r.slice(0,3).map(function(x){return esc(x.aid+' '+x.problem.toLowerCase())}).join(' · ')+'</div></div></button>'; }
@@ -1219,7 +1220,7 @@ function shareLow(){ var all=lowItems(); if(!all.length) return toast('Nothing l
 function renderWork(){
   var map={work:renderWorkList, workForm:renderWorkForm, req:renderReqList, reqForm:renderReqForm, tank:renderTankEntry, tankAdmin:renderTankAdmin,
     amc:renderAmc, venForm:renderVenForm, report:renderReport, problems:renderProblems, fire:renderFire, fireCheck:renderFireCheck, fex:renderFexCheck,
-    fexAdmin:renderFexAdmin, fexForm:renderFexForm, fcAdmin:renderFireDefs, fcForm:renderFireDefForm, fireLog:renderFireLog, meter:renderMeterEntry, meterRep:renderMeterRep};
+    fexAdmin:renderFexAdmin, fexForm:renderFexForm, fcAdmin:renderFireDefs, fcForm:renderFireDefForm, fireLog:renderFireLog, meter:renderMeterEntry, meterRep:renderMeterRep, dg:renderDg, dgRep:renderDgRep, dgSetup:renderDgSetup};
   var f=map[S.wv]; if (f) return f();
   var v=V(), t=S.data.todayIso, mgr=isMgr();
   var open=v.work.filter(function(w){return w.status!=='Done'}), mine=open.filter(function(w){return w.to===S.who});
@@ -1232,6 +1233,7 @@ function renderWork(){
     ['tank', mgr?'Tanker log':'Tanker entry', tankN+' today', '', '', mgr?"needAdmin(function(){wgo('tankAdmin')})":"wgo('tank')"],
     ['meter','Cauvery water', mtrTileMeta('Cauvery'), MT().today['Cauvery']?'':'1 due', 'warn', mgr?"needAdmin(function(){S.mrMeter='Cauvery';S.mr=null;S.mrYm=null;wgo('meterRep')})":"S.mf={meter:'Cauvery'};wgo('meter')"],
     ['meter','STP treated water', mtrTileMeta('STP treated'), MT().today['STP treated']?'':'1 due', 'warn', mgr?"needAdmin(function(){S.mrMeter='STP treated';S.mr=null;S.mrYm=null;wgo('meterRep')})":"S.mf={meter:'STP treated'};wgo('meter')"],
+    ['gen','Generator & diesel', dgTileMeta(), dgLow()?'Low diesel':(!mgr&&dgDue()?'1 due':''), dgLow()?'bad':'warn', mgr?"needAdmin(function(){S.dgr=null;S.dgYm=null;wgo('dgRep')})":"S.dgf=null;wgo('dg')"],
     ['flame','Fire safety', due.length? due.length+' check'+(due.length>1?'s':'')+' due' : 'Checks up to date', due.length?due.length+' due':(mgr&&fexDue?fexDue+' refill'+(fexDue>1?'s':'')+' due':''), due.length?'bad':'warn', "wgo('fire')"],
     ['alert','Report a problem','Camera, borewell, motor, extinguisher','','',"wgo('report')"]];
   if (mgr) tiles.push(['doc','AMC & vendors', amcLine(), '', '', "needAdmin(function(){wgo('amc')})"],
@@ -1716,12 +1718,133 @@ function renderMeterRep(){
 function delMeter(id){ if(!confirm('Remove this reading? The next day will be worked out again from the reading before it.')) return;
   call('deleteMeterReading',[S.pin,S.apin,id,S.mr.meter,S.mr.ym], function(r){ S.mr=r; toast(r.msg); renderMeterRep(); refreshAll(); }); }
 
+/* ============================================================ generator & diesel */
+function DG(){ return V().dg || {name:'Generator',cap:0,warn:80,lph:15,left:null,hasTank:false,last:null,todayHours:0,todayCount:0,lastDip:null}; }
+function dgLow(){ var g=DG(); return g.left!==null && g.warn && g.left<g.warn; }
+function dgDue(){ var g=DG(); return g.todayCount ? 0 : 1; }
+function dgTileMeta(){ var g=DG(); return (g.left!==null?'About '+kl(Math.round(g.left))+' L left':'Diesel left: do a dipstick check')+' · '+(g.todayCount?'ran '+kl(g.todayHours)+' h today':'hour meter not read today'); }
+function dgGauge(g){ if (g.left===null) return '<div class="card" style="box-shadow:none;background:var(--blue-soft);border:0;padding:12px 14px"><b style="color:var(--info)">Diesel left: not known yet</b><div class="rsub">Do one dipstick check — from then on the app keeps count.</div></div>';
+  var cap=g.cap||Math.max(g.left,1), pc=Math.max(0,Math.min(100,Math.round(g.left/cap*100))), low=g.warn&&g.left<g.warn, col=low?'var(--bad)':pc<40?'var(--warn)':'#D9822B';
+  return '<div><div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted)"><span>Diesel left (estimated)</span><span>'+(g.cap?pc+'% of '+kl(g.cap)+' L':'')+'</span></div>'+
+    '<div style="display:flex;align-items:baseline;gap:8px;margin-top:4px"><b style="font:600 26px var(--serif);color:'+(low?'var(--bad)':'var(--ink)')+'">'+kl(Math.round(g.left))+' L</b><span class="rsub">≈ '+kl(Math.round(g.left/(g.lph||15)*10)/10)+' hours of running at '+kl(g.lph)+' L/h</span></div>'+
+    (g.cap?'<div style="height:14px;border-radius:8px;background:var(--track);overflow:hidden;margin-top:6px"><div style="width:'+pc+'%;height:100%;background:'+col+'"></div></div>':'')+
+    (low?'<div class="rsub" style="color:var(--bad);font-weight:600;margin-top:6px">Low diesel — buy soon</div>':'')+'</div>'; }
+function renderDg(){
+  var g=DG(), t=S.data.todayIso, canPast=isMgr()&&S.isAdmin, f=S.dgf||(S.dgf={mode:'hours',date:t,meter:'',reason:'',amount:'',litres:'',supplier:'',cm:'',level:'',photo:''});
+  if(!f.date||!canPast) f.date=t; var past=f.date!==t;
+  var modes=[['hours','Hour meter'],['bought','Diesel bought'],['dip','Dipstick check']];
+  var h=crumbBtn('Work',"S.dgf=null;wgo('home')")+'<div class="seg" style="margin-bottom:12px">'+modes.map(function(m){ return '<button class="chip'+(f.mode===m[0]?' on':'')+'" onclick="dgRead();S.dgf.mode=\''+m[0]+'\';renderDg()">'+m[1]+'</button>'; }).join('')+'</div><div class="card">';
+  var dateRow=canPast?'<div class="seg" style="margin-top:10px"><button class="chip'+(!past?' on':'')+'" onclick="dgRead();S.dgf.date=\''+t+'\';renderDg()">Today</button><button class="chip'+(f.date===isoAdd(t,-1)?' on':'')+'" onclick="dgRead();S.dgf.date=\''+isoAdd(t,-1)+'\';renderDg()">Yesterday</button>'+
+      '<input class="inp" type="date" style="width:auto;padding:8px 10px" value="'+f.date+'" max="'+t+'" onchange="if(this.value&&this.value<=\''+t+'\'){dgRead();S.dgf.date=this.value;renderDg()}"></div>'+
+      (past?'<div class="rsub" style="margin-top:6px;color:var(--warn);font-weight:600">Entering for '+fmtD(f.date)+' (a past day) — only you can do this</div>':'<div class="rsub" style="margin-top:6px">'+esc(S.data.today)+'</div>')
+     :'<div class="rsub">'+esc(g.name)+' · '+esc(S.data.today)+' · today only</div>';
+  if (f.mode==='hours'){
+    h+='<div class="tname" style="font-size:18px">Generator hour meter</div>'+dateRow+
+      '<div class="kv" style="margin-top:14px"><b>Last reading</b><span>'+(g.last?'<b>'+kl(g.last.meter)+'</b> h · '+(g.last.date===t?'today':g.last.date===isoAdd(t,-1)?'yesterday':fmtD(g.last.date,false))+(g.last.time?' '+esc(g.last.time):'')+' · '+esc(g.last.by):'None yet — this will be the starting reading')+'</span>'+
+      (g.todayCount?'<b>Today so far</b><span>'+kl(g.todayHours)+' h · '+g.todayCount+' reading'+(g.todayCount>1?'s':'')+'</span>':'')+'</div>'+
+      '<div class="field"><div class="label">Hour meter on the panel now</div><input class="inp" id="dg_meter" inputmode="decimal" autocomplete="off" style="font:600 30px var(--serif);text-align:center" placeholder="0" value="'+esc(f.meter)+'" oninput="S.dgf.meter=this.value;dgDiff()"></div>'+
+      '<div id="dg_diff"></div>'+
+      '<div class="field"><div class="label">Why did it run? (optional)</div><div class="seg">'+['Power cut','Weekly test','Service'].map(function(r){ return '<button class="chip'+(f.reason===r?' on':'')+'" onclick="dgRead();S.dgf.reason=(S.dgf.reason===\''+r+'\'?\'\':\''+r+'\');renderDg()">'+r+'</button>'; }).join('')+'</div></div>'+
+      '<div class="hint">You can enter it several times a day — e.g. when the power goes and when it comes back.</div>'+
+      '<button class="save" id="dgSave" onclick="saveDgHours()">Save reading</button>';
+  } else if (f.mode==='bought'){
+    h+='<div class="tname" style="font-size:18px">Diesel bought</div>'+dateRow+
+      '<div class="field two"><div><div class="label">Amount ₹</div><input class="inp" id="dg_amount" inputmode="decimal" style="font:600 22px var(--serif);text-align:center" value="'+esc(f.amount)+'" oninput="S.dgf.amount=this.value;dgBoughtHint()"></div>'+
+      '<div><div class="label">Litres (from bill)</div><input class="inp" id="dg_litres" inputmode="decimal" style="font:600 22px var(--serif);text-align:center" value="'+esc(f.litres)+'" oninput="S.dgf.litres=this.value;dgBoughtHint()"></div></div>'+
+      '<div class="hint" id="dg_bhint"></div>'+
+      '<div class="field"><div class="label">Supplier</div><input class="inp" id="dg_supplier" placeholder="e.g. petrol bunk name" value="'+esc(f.supplier)+'"></div>'+
+      '<div class="field"><div class="label">Photo of bill (optional)</div><label class="inp" style="display:flex;gap:8px;align-items:center;color:var(--muted);cursor:pointer">'+svg('camera',1.8).replace('<svg','<svg width="18" height="18"')+
+        '<span id="dg_ph">'+(f.photo?'Photo added ✓':'Add photo')+'</span><input type="file" accept="image/*" capture="environment" style="display:none" onchange="dgPhoto(this)"></label></div>'+
+      '<button class="save" id="dgSave" onclick="saveDgBought()">Save</button>';
+  } else {
+    h+='<div class="tname" style="font-size:18px">Dipstick check</div>'+dateRow+'<div class="rsub" style="margin-top:4px">Dip a clean rod to the bottom of the tank, take it out and read the wet mark in cm.</div>'+
+      (g.hasTank?'<div class="field"><div class="label">Diesel height on the rod (cm)</div><input class="inp" id="dg_cm" inputmode="decimal" style="font:600 30px var(--serif);text-align:center" placeholder="0" value="'+esc(f.cm)+'" oninput="S.dgf.cm=this.value;dgDipHint()"></div><div id="dg_dip"></div>'
+        :'<div class="card" style="box-shadow:none;background:var(--warn-soft);border:0;margin-top:12px;padding:12px 14px"><b style="color:var(--warn)">Tank size not entered yet</b><div class="rsub">The manager enters the tank length and width once in Setup.</div></div>')+
+      (canPast?'<div class="field"><div class="label">Or type the litres directly (only you)</div><input class="inp" id="dg_level" inputmode="decimal" placeholder="e.g. 200" value="'+esc(f.level)+'"></div>':'')+
+      ((g.hasTank||canPast)?'<button class="save" id="dgSave" onclick="saveDgDip()">Save check</button>':'');
+  }
+  h+='</div><div class="card" style="margin-top:12px">'+dgGauge(g)+'</div>'+
+    (canPast?'<div class="btns" style="margin-top:12px"><button class="btn2" onclick="S.dgr=null;S.dgYm=null;wgo(\'dgRep\')">Monthly report</button><button class="btn2" onclick="wgo(\'dgSetup\')">Setup</button></div>':'');
+  $('view').innerHTML=h; if(f.mode==='hours') dgDiff(); if(f.mode==='bought') dgBoughtHint(); if(f.mode==='dip') dgDipHint();
+}
+function dgRead(){ var f=S.dgf; ['meter','amount','litres','supplier','cm','level'].forEach(function(k){ var e=$('dg_'+k); if(e) f[k]=e.value; }); }
+function dgDiff(){ var box=$('dg_diff'); if(!box) return; var g=DG(), v=mtrNum(S.dgf.meter); if(!v||!g.last||S.dgf.date!==S.data.todayIso){ box.innerHTML=''; return; }
+  var d=Math.round((v-g.last.meter)*10)/10;
+  if (d<0){ box.innerHTML='<div class="card" style="box-shadow:none;background:var(--bad-soft);border:0;margin-top:10px;padding:12px 14px"><b style="color:var(--bad);font-size:16px">Lower than the last reading</b><div class="rsub">'+kl(v)+' is less than '+kl(g.last.meter)+'. Please check the panel again.</div></div>'; return; }
+  var used=Math.round(d*(g.lph||15)), left=g.left!==null?Math.max(0,Math.round(g.left-used)):null;
+  box.innerHTML='<div class="card" style="box-shadow:none;background:'+(d>24?'var(--warn-soft)':'var(--ok-soft)')+';border:0;margin-top:10px;padding:12px 14px"><div class="rsub" style="margin:0 0 2px">'+kl(v)+' − '+kl(g.last.meter)+' =</div>'+
+    '<b style="color:'+(d>24?'var(--warn)':'var(--ok)')+';font-size:18px">Ran '+kl(d)+' hours since the last reading</b><div class="rsub">≈ '+kl(used)+' L of diesel used ('+kl(d)+' h × '+kl(g.lph)+' L/h)'+(left!==null?' · about '+kl(left)+' L left':'')+'</div></div>'; }
+function dgBoughtHint(){ var e=$('dg_bhint'); if(!e) return; var a=mtrNum(S.dgf.amount), l=mtrNum(S.dgf.litres), g=DG();
+  e.innerHTML = a&&l ? 'Price: ₹'+kl(Math.round(a/l*100)/100)+' a litre' : a&&!l ? 'No litres on the bill? Leave it empty — the app works it out from the last price.' : '';
+  if (l && g.left!==null) e.innerHTML+=(e.innerHTML?' · ':'')+'<b>'+kl(Math.round(g.left))+' L + '+kl(l)+' L = about '+kl(Math.round(g.left+l))+' L</b>'; }
+function dgDipHint(){ var box=$('dg_dip'); if(!box) return; var cm=mtrNum(S.dgf.cm), g=DG(); if(!cm){ box.innerHTML=''; return; }
+  var L=g.L, W=g.W;
+  if (g.H && cm>g.H){ box.innerHTML='<div class="card" style="box-shadow:none;background:var(--bad-soft);border:0;margin-top:10px;padding:12px 14px"><b style="color:var(--bad)">More than the tank height ('+kl(g.H)+' cm)</b><div class="rsub">Please measure again.</div></div>'; return; }
+  if (!L||!W){ box.innerHTML='<div class="rsub" style="margin-top:8px">The app will work out the litres from the tank size when you save.</div>'; return; }
+  var lit=Math.round(L*W*cm/1000);
+  box.innerHTML='<div class="card" style="box-shadow:none;background:var(--blue-soft);border:0;margin-top:10px;padding:12px 14px"><div class="rsub" style="margin:0 0 2px">Tank '+kl(L)+' cm × '+kl(W)+' cm × '+kl(cm)+' cm ÷ 1000 =</div><b style="color:var(--info);font-size:18px">'+kl(lit)+' L in the tank</b>'+(g.left!==null?'<div class="rsub">App estimate now: '+kl(Math.round(g.left))+' L</div>':'')+'</div>'; }
+function dgPhoto(inp){ var file=inp.files&&inp.files[0]; if(!file) return; $('dg_ph').textContent='Adding…'; resizePhoto(file,function(d){ S.dgf.photo=d; $('dg_ph').textContent='Photo added ✓'; }); }
+function dgApin(){ return (isMgr()&&S.isAdmin)?S.apin:''; }
+function dgDone(d){ S.data=d; updateOutCount(); toast(d.msg||'Saved'); S.dgr=null; var f=S.dgf; S.dgf={mode:f.mode,date:f.date,meter:'',reason:'',amount:'',litres:'',supplier:'',cm:'',level:'',photo:''}; renderDg(); window.scrollTo(0,0); }
+function saveDgHours(){ dgRead(); var f=S.dgf, v=mtrNum(f.meter), g=DG(); if(!v) return toast('Type the hour meter reading');
+  if (f.date===S.data.todayIso && g.last && v<g.last.meter) return toast('Lower than the last reading — please check');
+  btnBusy('dgSave'); call('addDgReading',[S.pin,S.who,{meter:v,reason:f.reason,date:f.date,apin:dgApin()}], dgDone, failBtn('dgSave','Save reading')); }
+function saveDgBought(){ dgRead(); var f=S.dgf; if(!mtrNum(f.litres)&&!mtrNum(f.amount)) return toast('Type the litres or the ₹ amount');
+  btnBusy('dgSave'); call('addDiesel',[S.pin,S.who,{amount:mtrNum(f.amount)||'',litres:mtrNum(f.litres)||'',supplier:f.supplier,date:f.date,apin:dgApin()},f.photo?{data:f.photo}:null], dgDone, failBtn('dgSave','Save')); }
+function saveDgDip(){ dgRead(); var f=S.dgf; if(!mtrNum(f.cm)&&!mtrNum(f.level)) return toast('Type the cm on the rod');
+  btnBusy('dgSave'); call('addDipstick',[S.pin,S.who,{cm:mtrNum(f.cm)||'',litres:mtrNum(f.level)||'',date:f.date,apin:dgApin()}], dgDone, failBtn('dgSave','Save check')); }
+function renderDgRep(){
+  if (!S.dgr || (S.dgYm && S.dgr.ym!==S.dgYm)){ $('view').innerHTML=crumbBtn('Work',"wgo('home')")+'<div class="card loading"><div class="spin"></div>Loading…</div>';
+    return call('getDgReport',[S.pin,S.apin,S.dgYm||''], function(r){ S.dgr=r; S.dgYm=r.ym; S.dgSet=r.setup; renderDgRep(); }); }
+  var r=S.dgr, su=r.setup, g={left:r.left,cap:su.cap,warn:su.warn,lph:r.lph};
+  var mx=Math.max(4,Math.ceil(Math.max.apply(null,r.cut.map(function(v,i){return v+r.other[i]})))), W=326,H=130,pl=24,pb=20,pt=8,bw=(W-pl)/r.cut.length, y=function(v){ return pt+(H-pt-pb)*(1-v/mx); };
+  var step=mx<=4?1:mx<=10?2:mx<=24?6:12, grid=''; for(var k=0;k<=mx;k+=step) grid+='<line x1="'+pl+'" x2="'+W+'" y1="'+y(k).toFixed(1)+'" y2="'+y(k).toFixed(1)+'" stroke="var(--line)"/><text x="'+(pl-5)+'" y="'+(y(k)+4).toFixed(1)+'" font-size="10" text-anchor="end" fill="var(--muted)">'+k+'</text>';
+  var bars=r.cut.map(function(c,i){ var o=r.other[i], s='', x=(pl+i*bw+1.2).toFixed(1), w=Math.max(2,bw-2.4).toFixed(1);
+    if(c>0) s+='<rect x="'+x+'" y="'+y(c).toFixed(1)+'" width="'+w+'" height="'+(H-pb-y(c)).toFixed(1)+'" rx="2" fill="#D9822B"><title>'+(i+1)+': '+c+' h</title></rect>';
+    if(o>0) s+='<rect x="'+x+'" y="'+y(c+o).toFixed(1)+'" width="'+w+'" height="'+(y(c)-y(c+o)).toFixed(1)+'" rx="2" fill="#9AA7AA"><title>'+(i+1)+': '+o+' h test/service</title></rect>'; return s; }).join('');
+  var xl=[1,8,15,22,r.cut.length].map(function(d){ return '<text x="'+(pl+(d-1)*bw+bw/2).toFixed(1)+'" y="'+(H-5)+'" font-size="10" text-anchor="middle" fill="var(--muted)">'+d+'</text>'; }).join('');
+  var row=function(x){ var main, sub, amt;
+    if (x.kind==='run'){ main=fmtD(x.date)+(x.time?' · '+esc(x.time):''); sub=(x.hours!==''?'Ran '+kl(x.hours)+' h':'Starting reading')+(x.reason?' · '+esc(x.reason.toLowerCase()):'')+' · meter '+kl(x.meter)+' · '+esc(x.by); amt=x.used!==''?'−'+kl(Math.round(x.used))+' L':'—'; }
+    else if (x.type==='Bought'){ main=fmtD(x.date)+(x.time?' · '+esc(x.time):''); sub='Bought '+kl(x.litres)+' L'+(x.amount?' · ₹'+kl(x.amount):'')+(x.price?' (₹'+kl(x.price)+'/L)':'')+(x.supplier?' · '+esc(x.supplier):'')+' · '+esc(x.by)+(x.photo?' · <a href="'+esc(x.photo)+'" target="_blank" style="color:var(--info)">bill</a>':''); amt='<span style="color:var(--ok)">+'+kl(x.litres)+' L</span>'; }
+    else { main=fmtD(x.date)+(x.time?' · '+esc(x.time):''); sub=(x.type==='Dipstick'?'Dipstick '+kl(x.cm)+' cm = '+kl(x.litres)+' L':'Level set to '+kl(x.litres)+' L')+(x.est!=null?' · app said '+kl(Math.round(x.est))+' L':'')+(x.newLph?' · now '+kl(x.newLph)+' L/h':'')+' · '+esc(x.by); amt='<span style="color:var(--info)">= '+kl(x.litres)+' L</span>'; }
+    return '<div class="row"><div class="rmain"><div class="rname">'+main+'</div><div class="rsub">'+sub+'</div></div><div style="text-align:right"><b style="font-family:var(--serif);white-space:nowrap">'+amt+'</b>'+(x.left!=null?'<div class="rsub">left '+kl(Math.round(x.left))+' L</div>':'')+'</div>'+
+      '<button class="chev" style="margin-left:10px" onclick="delDg(\''+x.id+'\')">✕</button></div>'; };
+  $('view').innerHTML=crumbBtn('Work',"S.dgr=null;S.dgYm=null;wgo('home')")+
+    '<button class="btn2 pri" style="width:100%;margin-bottom:12px" onclick="S.dgf=null;wgo(\'dg\')">+ Add entry (today or a past day)</button>'+
+    '<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div><div class="tname" style="font-size:18px">Generator &amp; diesel</div><div class="rsub">'+esc(su.name)+(su.cap?' · tank '+kl(su.L)+' × '+kl(su.W)+' × '+kl(su.H)+' cm ('+kl(su.cap)+' L)':' · tank size not set')+'</div></div>'+
+      '<button class="pill gold" style="padding:8px 12px" onclick="wgo(\'dgSetup\')">Setup</button></div><div style="margin-top:12px">'+dgGauge(g)+'</div></div>'+
+    '<div class="card" style="margin-top:12px"><div class="mhead"><button class="back" onclick="S.dgYm=addMonths(S.dgr.ym+\'-15\',-1).slice(0,7);renderDgRep()">‹</button><b>'+esc(r.label)+'</b>'+
+    '<button class="back" '+(r.ym>=S.data.todayIso.slice(0,7)?'disabled style="opacity:.3"':'onclick="S.dgYm=addMonths(S.dgr.ym+\'-15\',1).slice(0,7);renderDgRep()"')+'>›</button></div>'+
+    '<div class="stats" style="margin:4px 0 10px"><div class="stat" style="box-shadow:none"><b>'+kl(r.hours)+'</b><span>Hours run</span></div><div class="stat" style="box-shadow:none"><b>'+kl(r.used)+'</b><span>Litres used (est.)</span></div><div class="stat" style="box-shadow:none"><b>'+kl(r.lph)+'</b><span>Litres / hour</span></div></div>'+
+    '<div class="stats" style="margin:0 0 14px"><div class="stat" style="box-shadow:none"><b>'+kl(r.bought)+'</b><span>Litres bought</span></div><div class="stat" style="box-shadow:none"><b>₹'+kl(r.spent)+'</b><span>Spent · '+r.bills+' bill'+(r.bills===1?'':'s')+(r.avgPrice?' · avg ₹'+kl(r.avgPrice)+'/L':'')+'</span></div>'+
+    '<div class="stat" style="box-shadow:none"><b>'+kl(r.prevHours)+'</b><span>'+esc(r.prevLabel)+' hours · '+kl(r.prevUsed)+' L</span></div></div>'+
+    '<div class="label">Hours run per day · <span style="color:#D9822B">● power cut</span> <span style="color:#9AA7AA">● test / service</span></div><svg width="100%" viewBox="0 0 '+W+' '+H+'" style="font-family:var(--sans)">'+grid+bars+xl+'</svg>'+
+    '<div class="rsub" style="margin-top:6px">Power cuts entered: '+r.cuts+'</div></div>'+
+    '<div class="h2">Diesel passbook</div>'+(r.list.length?'<div class="list">'+r.list.map(row).join('')+'</div>':'<div class="card empty">No entries this month.</div>');
+}
+function delDg(id){ if(!confirm('Remove this entry? Diesel left will be worked out again.')) return;
+  call('deleteDgEntry',[S.pin,S.apin,id,S.dgr.ym], function(r){ S.dgr=r; toast(r.msg); renderDgRep(); refreshAll(); }); }
+function renderDgSetup(){
+  if (!S.dgr){ $('view').innerHTML='<div class="card loading"><div class="spin"></div>Loading…</div>'; return call('getDgReport',[S.pin,S.apin,''], function(r){ S.dgr=r; S.dgYm=r.ym; S.dgSet=r.setup; renderDgSetup(); }); }
+  var su=S.dgr.setup, fld=function(id,label,val,ph){ return '<div><div class="label">'+label+'</div><input class="inp" id="ds_'+id+'" inputmode="decimal" placeholder="'+(ph||'')+'" value="'+esc(val||'')+'"></div>'; };
+  $('view').innerHTML=crumbBtn('Generator & diesel',"wgo('dgRep')")+'<div class="card"><div class="tname" style="font-size:18px">Generator setup</div><div class="rsub">Only you see this · change it any time</div>'+
+    '<div class="field"><div class="label">Generator</div><input class="inp" id="ds_name" value="'+esc(su.name)+'"></div>'+
+    '<div class="field two">'+fld('L','Tank length (cm)',su.L,'e.g. 120')+fld('W','Tank width (cm)',su.W,'e.g. 60')+'</div>'+
+    '<div class="field two">'+fld('H','Tank height (cm)',su.H,'e.g. 50')+fld('price','Diesel price ₹ / L',su.price,'e.g. 92.50')+'</div>'+
+    '<div class="hint">Measure the inside of the box tank once. The price updates by itself from bills that show litres.</div>'+
+    '<div class="field two">'+fld('lph','Litres per hour',su.lph,'15')+fld('warn','Warn when below (L)',su.warn,'80')+'</div>'+
+    '<div class="hint">Start with the figure from the Kirloskar service person (about 15 L/h). Each dipstick check corrects it automatically.</div>'+
+    '<button class="save" id="dsSave" onclick="saveDgSet()">Save</button></div>';
+}
+function saveDgSet(){ var o={}; ['name','L','W','H','price','lph','warn'].forEach(function(k){ o[k]=$('ds_'+k).value; }); btnBusy('dsSave');
+  call('saveDgSetup',[S.pin,S.apin,o], function(r){ S.dgr=r; S.dgSet=r.setup; toast(r.msg); refreshAll(); wgo('dgRep'); }, failBtn('dsSave','Save')); }
+
 /* ============================================================ DESIGN: date + weather sky + festivals + splash */
 var WX_LAT=13.0256, WX_LNG=77.6510;
 function drawDate(){ var w=S.wx, fest=festival(); $('today').innerHTML=esc(S.data.today)+(fest&&fest.greet?' · '+esc(fest.greet):'')+(w&&w.temp!=null?'<span class="tchip" onclick="wxInfo()" style="cursor:pointer">'+wxIcon(w)+Math.round(w.temp)+'°C</span>':''); }
 // The forecast code can say "showers" for the hour even when it is sunny right now,
 // so rain is shown only when rain is actually falling (measured in the last 15 minutes).
-var APP_VER='4.9';
+var APP_VER='5.0';
 function realCode(c){ var code=+c.weather_code||0, pr=+c.precipitation||0, cc=c.cloud_cover==null?50:+c.cloud_cover;
   if (pr>=0.5 && cc>=60) return wxRain(code)?code:61;             // only real, steady rain
   if (wxRain(code)) return cc>=80?3:cc>=40?2:1;
