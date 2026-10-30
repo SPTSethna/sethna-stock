@@ -1166,7 +1166,7 @@ function openSheet(html,left){ var d=$('done'); d.className='done'+(left?' left'
 function toTab(t){ S.tab=t; document.querySelectorAll('.nav button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===t)}); }
 function wgo(v){ toTab('work'); S.wv=v; render(); window.scrollTo(0,0); }
 function agoAdmin(v){ toTab('admin'); S.av=v; render(); window.scrollTo(0,0); }
-function pillCls(st){ return {Open:'neutral','In progress':'blue',Done:'ok',Pending:'warn',Issued:'ok','To purchase':'blue',Rejected:'neutral',Paid:'ok',Loaded:'blue',OK:'ok',Problem:'bad',Working:'ok'}[st]||'warn'; }
+function pillCls(st){ return {Open:'neutral','In progress':'blue',Done:'ok',Pending:'warn',Issued:'ok','To purchase':'blue',Rejected:'neutral',Paid:'ok',Loaded:'blue',Received:'ok',OK:'ok',Problem:'bad',Working:'ok'}[st]||'warn'; }
 function chipSet(name, opts, cur, js){ return '<div class="seg">'+opts.map(function(o){ var v=o.v!=null?o.v:o, l=o.l||o; return '<button class="chip'+(v===cur?' on':'')+'" onclick="'+js+'(\''+jsq(v)+'\')">'+esc(l)+'</button>'; }).join('')+'</div>'; }
 function waLink(text){ return 'https://wa.me/?text='+encodeURIComponent(text); }
 function shareSheet(title, text){
@@ -1220,7 +1220,7 @@ function shareLow(){ var all=lowItems(); if(!all.length) return toast('Nothing l
 function renderWork(){
   var map={work:renderWorkList, workForm:renderWorkForm, req:renderReqList, reqForm:renderReqForm, tank:renderTankEntry, tankAdmin:renderTankAdmin,
     amc:renderAmc, venForm:renderVenForm, report:renderReport, problems:renderProblems, fire:renderFire, fireCheck:renderFireCheck, fex:renderFexCheck,
-    fexAdmin:renderFexAdmin, fexForm:renderFexForm, fcAdmin:renderFireDefs, fcForm:renderFireDefForm, fireLog:renderFireLog, meter:renderMeterEntry, meterRep:renderMeterRep, dg:renderDg, dgRep:renderDgRep, dgSetup:renderDgSetup};
+    fexAdmin:renderFexAdmin, fexForm:renderFexForm, fcAdmin:renderFireDefs, fcForm:renderFireDefForm, fireLog:renderFireLog, meter:renderMeterEntry, meterRep:renderMeterRep, dg:renderDg, dgRep:renderDgRep, dgSetup:renderDgSetup, reqRecv:renderReqRecv};
   var f=map[S.wv]; if (f) return f();
   var v=V(), t=S.data.todayIso, mgr=isMgr();
   var open=v.work.filter(function(w){return w.status!=='Done'}), mine=open.filter(function(w){return w.to===S.who});
@@ -1306,17 +1306,24 @@ function saveWorkForm(){ wfRead(); var f=S.wf; if(!f.details.trim()) return toas
 /* ------------------------------------------------------------ material requests */
 function renderReqList(){
   var mgr=isMgr()&&S.isAdmin, all=V().requests.slice().reverse(), list=mgr?all:all.filter(function(r){return r.by===S.who});
-  var pend=list.filter(function(r){return r.status==='Pending'}), rest=list.filter(function(r){return r.status!=='Pending'});
+  var arrive=all.filter(function(r){return r.status==='To purchase'}), toRate=mgr?all.filter(function(r){return r.status==='Received'&&!r.rate}):[];
+  var pend=list.filter(function(r){return r.status==='Pending'}), rest=list.filter(function(r){return r.status!=='Pending'&&r.status!=='To purchase'&&toRate.indexOf(r)<0});
   var stockOf=function(r){ var c=catObj(r.cat), it=c&&c.items.filter(function(x){return x.n===r.item})[0]; return it ? (it.stock>0?'In stock: '+fmtN(it.stock)+' '+esc(it.u):'Out of stock') : ''; };
   var card=function(r){ var s=stockOf(r);
     return '<div class="card" style="margin-bottom:10px"><div class="rname" style="white-space:normal">'+esc(r.item)+' · <b>'+fmtN(r.qty)+' '+esc(r.u)+'</b></div><div class="rsub">'+esc(r.by)+(r.reason?' · '+esc(r.reason):'')+' · '+esc(r.on)+'</div>'+
       (s?'<div class="rsub" style="color:'+(/Out/.test(s)?'var(--bad)':'var(--ok)')+'">'+s+'</div>':'')+
       (r.status==='Pending'&&mgr?'<div class="btns" style="grid-template-columns:1fr 1fr 1fr;margin-top:12px"><button class="btn2" onclick="decide(\''+r.id+'\',\'Rejected\')">Reject</button><button class="btn2" onclick="decide(\''+r.id+'\',\'To purchase\')">To purchase</button><button class="btn2 pri" onclick="decide(\''+r.id+'\',\'Issued\')">Issue ✓</button></div>'
+        :r.status==='To purchase'?'<div style="margin-top:8px"><span class="pill blue">To purchase</span>'+(r.decidedOn?' <span class="rsub">approved '+esc(r.decidedOn)+'</span>':'')+'</div><button class="btn2 pri" style="width:100%;margin-top:12px" onclick="openReceive(\''+r.id+'\')">✓ Received</button>'
+        :r.status==='Received'?'<div style="margin-top:8px"><span class="pill ok">Received</span> <span class="rsub">'+fmtN(r.recQty)+' '+esc(r.u)+' · '+esc(r.recBy)+' · '+esc(r.recOn)+(r.supplier?' · '+esc(r.supplier):'')+(r.givenTo?' · given to '+esc(r.givenTo):' · in '+esc(r.cat)+' stock')+(mgr&&r.billPhoto?' · <a href="'+esc(r.billPhoto)+'" target="_blank" style="color:var(--info)">bill</a>':'')+'</span></div>'+
+            (mgr&&!r.rate?'<div class="field two" style="margin-top:10px"><div><div class="label">Rate ₹ per '+esc(r.u)+'</div><input class="inp" id="rt_'+r.id+'" inputmode="decimal" placeholder="₹"></div><div style="display:flex;align-items:flex-end"><button class="btn2 pri" style="width:100%" onclick="saveRate(\''+r.id+'\')">Save rate</button></div></div>':(mgr&&r.rate?'<div class="rsub" style="margin-top:4px">₹'+fmtN(r.rate)+' per '+esc(r.u)+' · ₹'+fmtN(Math.round(r.rate*r.recQty))+'</div>':''))
         :'<div style="margin-top:8px"><span class="pill '+pillCls(r.status)+'">'+esc(r.status)+'</span>'+(r.decidedOn?' <span class="rsub">'+esc(r.decidedOn)+'</span>':'')+'</div>')+'</div>'; };
   $('view').innerHTML=crumbBtn('Work',"wgo('home')")+
     '<div class="card" style="display:flex;align-items:center;gap:12px"><div class="rmain"><div class="tname" style="font-size:18px">Material requests</div><div class="rsub">'+(mgr?pend.length+' waiting · <b>Issue</b> records it as Used in stock':'Your requests and their status')+'</div></div>'+
     '<button class="pill gold" style="padding:8px 12px" onclick="wgo(\'reqForm\')">+ Request</button></div><div style="height:12px"></div>'+
-    (pend.length?pend.map(card).join(''):'<div class="card empty">No pending requests ✓</div>')+(rest.length?'<div class="h2">Recent</div>'+rest.slice(0,15).map(card).join(''):'');
+    (arrive.length?'<div class="h2">Waiting to arrive ('+arrive.length+') — tap Received when it comes</div>'+arrive.map(card).join(''):'')+
+    (toRate.length?'<div class="h2">Received — add rate (only you)</div>'+toRate.map(card).join(''):'')+
+    (mgr||pend.length?'<div class="h2">'+(mgr?'Waiting for you':'Your pending requests')+'</div>':'')+
+    (pend.length?pend.map(card).join(''):(mgr?'<div class="card empty">No pending requests ✓</div>':''))+(rest.length?'<div class="h2">Recent</div>'+rest.slice(0,15).map(card).join(''):'');
 }
 function decide(id,dec){ call('decideRequest',[S.pin,S.apin,id,dec,''], dataOk()); }
 function renderReqForm(){
@@ -1742,9 +1749,10 @@ function renderDg(){
     h+='<div class="tname" style="font-size:18px">Generator hour meter</div>'+dateRow+
       '<div class="kv" style="margin-top:14px"><b>Last reading</b><span>'+(g.last?'<b>'+kl(g.last.meter)+'</b> h · '+(g.last.date===t?'today':g.last.date===isoAdd(t,-1)?'yesterday':fmtD(g.last.date,false))+(g.last.time?' '+esc(g.last.time):'')+' · '+esc(g.last.by):'None yet — this will be the starting reading')+'</span>'+
       (g.todayCount?'<b>Today so far</b><span>'+kl(g.todayHours)+' h · '+g.todayCount+' reading'+(g.todayCount>1?'s':'')+'</span>':'')+'</div>'+
-      '<div class="field"><div class="label">Hour meter on the panel now</div><input class="inp" id="dg_meter" inputmode="decimal" autocomplete="off" style="font:600 30px var(--serif);text-align:center" placeholder="0" value="'+esc(f.meter)+'" oninput="S.dgf.meter=this.value;dgDiff()"></div>'+
+      '<div class="field"><div class="label">Hour meter on the panel now</div><div class="hint" style="margin:0 0 8px">Black digits = hours, <b style="color:var(--bad)">red digits</b> come after the dot · e.g. black 00618 red 97 = <b>618.97</b></div><input class="inp" id="dg_meter" inputmode="decimal" autocomplete="off" style="font:600 30px var(--serif);text-align:center" placeholder="0" value="'+esc(f.meter)+'" oninput="S.dgf.meter=this.value;dgDiff()"></div>'+
       '<div id="dg_diff"></div>'+
       '<div class="field"><div class="label">Why did it run? (optional)</div><div class="seg">'+['Power cut','Weekly test','Service'].map(function(r){ return '<button class="chip'+(f.reason===r?' on':'')+'" onclick="dgRead();S.dgf.reason=(S.dgf.reason===\''+r+'\'?\'\':\''+r+'\');renderDg()">'+r+'</button>'; }).join('')+'</div></div>'+
+      (g.last&&!past?'<button class="btn2 full" id="dgNoRun" style="width:100%;margin-top:12px" onclick="saveDgNoRun()">Did not run — same reading ('+kl(g.last.meter)+')</button><div class="hint">Use this if the meter still shows the last reading. Please enter the reading every day, even when it did not run.</div>':'')+
       '<div class="hint">You can enter it several times a day — e.g. when the power goes and when it comes back.</div>'+
       '<button class="save" id="dgSave" onclick="saveDgHours()">Save reading</button>';
   } else if (f.mode==='bought'){
@@ -1770,6 +1778,7 @@ function renderDg(){
 function dgRead(){ var f=S.dgf; ['meter','amount','litres','supplier','cm','level'].forEach(function(k){ var e=$('dg_'+k); if(e) f[k]=e.value; }); }
 function dgDiff(){ var box=$('dg_diff'); if(!box) return; var g=DG(), v=mtrNum(S.dgf.meter); if(!v||!g.last||S.dgf.date!==S.data.todayIso){ box.innerHTML=''; return; }
   var d=Math.round((v-g.last.meter)*10)/10;
+  if (d>72){ box.innerHTML='<div class="card" style="box-shadow:none;background:var(--bad-soft);border:0;margin-top:10px;padding:12px 14px"><b style="color:var(--bad);font-size:16px">That is '+kl(Math.round(d))+' hours — please check</b><div class="rsub">Did you type the red digits after the dot? e.g. black 00618 red 97 = 618.97</div></div>'; return; }
   if (d<0){ box.innerHTML='<div class="card" style="box-shadow:none;background:var(--bad-soft);border:0;margin-top:10px;padding:12px 14px"><b style="color:var(--bad);font-size:16px">Lower than the last reading</b><div class="rsub">'+kl(v)+' is less than '+kl(g.last.meter)+'. Please check the panel again.</div></div>'; return; }
   var used=Math.round(d*(g.lph||15)), left=g.left!==null?Math.max(0,Math.round(g.left-used)):null;
   box.innerHTML='<div class="card" style="box-shadow:none;background:'+(d>24?'var(--warn-soft)':'var(--ok-soft)')+';border:0;margin-top:10px;padding:12px 14px"><div class="rsub" style="margin:0 0 2px">'+kl(v)+' − '+kl(g.last.meter)+' =</div>'+
@@ -1786,6 +1795,8 @@ function dgDipHint(){ var box=$('dg_dip'); if(!box) return; var cm=mtrNum(S.dgf.
 function dgPhoto(inp){ var file=inp.files&&inp.files[0]; if(!file) return; $('dg_ph').textContent='Adding…'; resizePhoto(file,function(d){ S.dgf.photo=d; $('dg_ph').textContent='Photo added ✓'; }); }
 function dgApin(){ return (isMgr()&&S.isAdmin)?S.apin:''; }
 function dgDone(d){ S.data=d; updateOutCount(); toast(d.msg||'Saved'); S.dgr=null; var f=S.dgf; S.dgf={mode:f.mode,date:f.date,meter:'',reason:'',amount:'',litres:'',supplier:'',cm:'',level:'',photo:''}; renderDg(); window.scrollTo(0,0); }
+function saveDgNoRun(){ var g=DG(); if(!g.last) return; if(!confirm('Save today\'s reading as '+kl(g.last.meter)+' (did not run)?')) return;
+  btnBusy('dgNoRun','Saving…'); call('addDgReading',[S.pin,S.who,{meter:g.last.meter,reason:'Not run',date:S.data.todayIso,apin:dgApin()}], dgDone, failBtn('dgNoRun','Did not run — same reading')); }
 function saveDgHours(){ dgRead(); var f=S.dgf, v=mtrNum(f.meter), g=DG(); if(!v) return toast('Type the hour meter reading');
   if (f.date===S.data.todayIso && g.last && v<g.last.meter) return toast('Lower than the last reading — please check');
   btnBusy('dgSave'); call('addDgReading',[S.pin,S.who,{meter:v,reason:f.reason,date:f.date,apin:dgApin()}], dgDone, failBtn('dgSave','Save reading')); }
@@ -1804,7 +1815,7 @@ function renderDgRep(){
     if(o>0) s+='<rect x="'+x+'" y="'+y(c+o).toFixed(1)+'" width="'+w+'" height="'+(y(c)-y(c+o)).toFixed(1)+'" rx="2" fill="#9AA7AA"><title>'+(i+1)+': '+o+' h test/service</title></rect>'; return s; }).join('');
   var xl=[1,8,15,22,r.cut.length].map(function(d){ return '<text x="'+(pl+(d-1)*bw+bw/2).toFixed(1)+'" y="'+(H-5)+'" font-size="10" text-anchor="middle" fill="var(--muted)">'+d+'</text>'; }).join('');
   var row=function(x){ var main, sub, amt;
-    if (x.kind==='run'){ main=fmtD(x.date)+(x.time?' · '+esc(x.time):''); sub=(x.hours!==''?'Ran '+kl(x.hours)+' h':'Starting reading')+(x.reason?' · '+esc(x.reason.toLowerCase()):'')+' · meter '+kl(x.meter)+' · '+esc(x.by); amt=x.used!==''?'−'+kl(Math.round(x.used))+' L':'—'; }
+    if (x.kind==='run'){ main=fmtD(x.date)+(x.time?' · '+esc(x.time):''); sub=(x.reason==='Not run'?'Did not run':x.hours!==''?'Ran '+kl(x.hours)+' h':'Starting reading')+(x.reason&&x.reason!=='Not run'?' · '+esc(x.reason.toLowerCase()):'')+' · meter '+kl(x.meter)+' · '+esc(x.by); amt=x.used!==''?'−'+kl(Math.round(x.used))+' L':'—'; }
     else if (x.type==='Bought'){ main=fmtD(x.date)+(x.time?' · '+esc(x.time):''); sub='Bought '+kl(x.litres)+' L'+(x.amount?' · ₹'+kl(x.amount):'')+(x.price?' (₹'+kl(x.price)+'/L)':'')+(x.supplier?' · '+esc(x.supplier):'')+' · '+esc(x.by)+(x.photo?' · <a href="'+esc(x.photo)+'" target="_blank" style="color:var(--info)">bill</a>':''); amt='<span style="color:var(--ok)">+'+kl(x.litres)+' L</span>'; }
     else { main=fmtD(x.date)+(x.time?' · '+esc(x.time):''); sub=(x.type==='Dipstick'?'Dipstick '+kl(x.cm)+' cm = '+kl(x.litres)+' L':'Level set to '+kl(x.litres)+' L')+(x.est!=null?' · app said '+kl(Math.round(x.est))+' L':'')+(x.newLph?' · now '+kl(x.newLph)+' L/h':'')+' · '+esc(x.by); amt='<span style="color:var(--info)">= '+kl(x.litres)+' L</span>'; }
     return '<div class="row"><div class="rmain"><div class="rname">'+main+'</div><div class="rsub">'+sub+'</div></div><div style="text-align:right"><b style="font-family:var(--serif);white-space:nowrap">'+amt+'</b>'+(x.left!=null?'<div class="rsub">left '+kl(Math.round(x.left))+' L</div>':'')+'</div>'+
@@ -1839,12 +1850,40 @@ function renderDgSetup(){
 function saveDgSet(){ var o={}; ['name','L','W','H','price','lph','warn'].forEach(function(k){ o[k]=$('ds_'+k).value; }); btnBusy('dsSave');
   call('saveDgSetup',[S.pin,S.apin,o], function(r){ S.dgr=r; S.dgSet=r.setup; toast(r.msg); refreshAll(); wgo('dgRep'); }, failBtn('dsSave','Save')); }
 
+/* ============================================================ material received */
+function openReceive(id){ var r=V().requests.filter(function(x){return x.id===id})[0]; if(!r) return; S.rcv={id:id,qty:r.qty,supplier:'',photo:'',give:false}; wgo('reqRecv'); }
+function renderReqRecv(){
+  var f=S.rcv, r=f&&V().requests.filter(function(x){return x.id===f.id})[0]; if(!r) return wgo('req');
+  var c=catObj(r.cat), it=c&&c.items.filter(function(x){return x.n===r.item})[0], q=Number(f.qty)||0, first=(r.by||'').split(' ')[0];
+  $('view').innerHTML=crumbBtn('Material requests',"S.rcv=null;wgo('req')")+'<div class="card"><div class="tname" style="font-size:18px">Material received</div><div class="rsub">'+esc(r.item)+' · '+esc(r.cat)+' · requested by '+esc(r.by)+'</div>'+
+    '<div class="field"><div class="label">Quantity received</div><div class="stepper"><button onclick="rcvStep(-1)">−</button><input id="rcv_qty" type="number" inputmode="decimal" value="'+esc(f.qty)+'" oninput="S.rcv.qty=this.value;rcvHint()"><button onclick="rcvStep(1)">+</button><span class="unit">'+esc(r.u)+'</span></div>'+
+      '<div class="hint">Requested '+fmtN(r.qty)+' '+esc(r.u)+'. Less came? Type the number — the rest stays waiting.</div></div>'+
+    '<div class="field"><div class="label">Supplier / shop</div><input class="inp" id="rcv_sup" placeholder="e.g. shop name" value="'+esc(f.supplier)+'" oninput="S.rcv.supplier=this.value"></div>'+
+    '<div class="field"><div class="label">Photo of bill (optional)</div><label class="inp" style="display:flex;gap:8px;align-items:center;color:var(--muted);cursor:pointer">'+svg('camera',1.8).replace('<svg','<svg width="18" height="18"')+
+      '<span id="rcv_ph">'+(f.photo?'Photo added ✓':'Add photo')+'</span><input type="file" accept="image/*" capture="environment" style="display:none" onchange="rcvPhoto(this)"></label></div>'+
+    '<div class="field"><div class="label">After receiving</div><div class="seg2" style="margin:0"><button class="'+(!f.give?'on':'')+'" onclick="S.rcv.give=false;renderReqRecv()">Keep in store</button><button class="'+(f.give?'on':'')+'" onclick="S.rcv.give=true;renderReqRecv()">Give to '+esc(first)+' now</button></div>'+
+      '<div class="hint">“Give to '+esc(first)+' now” also records it as Used.</div></div>'+
+    '<div id="rcv_hint"></div><button class="save" id="rcvSave" onclick="saveReceive()">Save — received</button></div>';
+  S.rcvStock=it?Number(it.stock)||0:null; rcvHint();
+}
+function rcvHint(){ var e=$('rcv_hint'), f=S.rcv; if(!e) return; var r=V().requests.filter(function(x){return x.id===f.id})[0], q=Number(f.qty)||0;
+  if(!q||S.rcvStock===null){ e.innerHTML=''; return; }
+  var after=f.give?S.rcvStock:S.rcvStock+q;
+  e.innerHTML='<div class="card" style="box-shadow:none;background:var(--ok-soft);border:0;margin-top:12px;padding:12px 14px"><b style="color:var(--ok)">'+esc(r.cat)+' stock: '+fmtN(S.rcvStock)+' → '+fmtN(Math.round((S.rcvStock+q)*100)/100)+' '+esc(r.u)+(f.give?' → '+fmtN(after)+' after giving':'')+'</b><div class="rsub">Saved as a Purchase in Stock In-Out'+(f.give?' + a Used line for '+esc(r.by):'')+'</div></div>'; }
+function rcvStep(d){ var f=S.rcv; f.qty=Math.max(1,(Number(f.qty)||0)+d); $('rcv_qty').value=f.qty; rcvHint(); }
+function rcvPhoto(inp){ var file=inp.files&&inp.files[0]; if(!file) return; $('rcv_ph').textContent='Adding…'; resizePhoto(file,function(d){ S.rcv.photo=d; $('rcv_ph').textContent='Photo added ✓'; }); }
+function saveReceive(){ var f=S.rcv; f.qty=$('rcv_qty').value; f.supplier=$('rcv_sup').value; if(!(Number(f.qty)>0)) return toast('Enter the quantity received');
+  btnBusy('rcvSave'); call('receiveRequest',[S.pin,S.who,f.id,{qty:f.qty,supplier:f.supplier,giveNow:f.give},f.photo?{data:f.photo}:null],
+    function(d){ S.rcv=null; S.data=d; updateOutCount(); toast(d.msg); wgo('req'); }, failBtn('rcvSave','Save — received')); }
+function saveRate(id){ var v=$('rt_'+id).value; if(!(Number(v)>0)) return toast('Enter the rate');
+  call('setReceivedRate',[S.pin,S.apin,id,v], function(d){ S.data=d; toast(d.msg); render(); }); }
+
 /* ============================================================ DESIGN: date + weather sky + festivals + splash */
 var WX_LAT=13.0256, WX_LNG=77.6510;
 function drawDate(){ var w=S.wx, fest=festival(); $('today').innerHTML=esc(S.data.today)+(fest&&fest.greet?' · '+esc(fest.greet):'')+(w&&w.temp!=null?'<span class="tchip" onclick="wxInfo()" style="cursor:pointer">'+wxIcon(w)+Math.round(w.temp)+'°C</span>':''); }
 // The forecast code can say "showers" for the hour even when it is sunny right now,
 // so rain is shown only when rain is actually falling (measured in the last 15 minutes).
-var APP_VER='5.0';
+var APP_VER='5.3';
 function realCode(c){ var code=+c.weather_code||0, pr=+c.precipitation||0, cc=c.cloud_cover==null?50:+c.cloud_cover;
   if (pr>=0.5 && cc>=60) return wxRain(code)?code:61;             // only real, steady rain
   if (wxRain(code)) return cc>=80?3:cc>=40?2:1;
